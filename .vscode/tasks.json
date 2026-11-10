@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Flutter: Ejecutar Fprint-Manager (Linux)",
+      "type": "shell",
+      "command": "flutter run -d linux",
+      "problemMatcher": ["$dart-flutter"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "Flutter: Ejecutar Binario Directo (Debug)",
+      "type": "shell",
+      "command": "./build/linux/x64/debug/bundle/fprint_manager",
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Flutter: Compilar para Linux (Release)",
+      "type": "shell",
+      "command": "flutter build linux --release",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$dart-flutter"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Flutter: Analizar y Ejecutar Tests",
+      "type": "shell",
+      "command": "flutter analyze && flutter test",
+      "group": "test",
+      "problemMatcher": ["$dart-flutter"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    }
+  ]
+}
+
