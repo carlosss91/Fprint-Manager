@@ -1,0 +1,16 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Fprint-Manager
+GenericName=Fingerprint Manager
+GenericName[es]=Gestor de Huellas Dactilares
+Comment=Enroll, verify, and manage fingerprint readers via fprintd
+Comment[es]=Registra, verifica y gestiona lectores de huellas mediante fprintd
+Exec=fprint_manager
+Icon=io.github.carlosss91.fprintmanager
+Terminal=false
+Categories=Settings;HardwareSettings;Security;
+Keywords=fingerprint;biometric;fprintd;security;login;pam;authentication;
+Keywords[es]=huella;biometría;fprintd;seguridad;sesión;pam;autenticación;
+StartupNotify=true
+StartupWMClass=io.github.carlosss91.fprintmanager

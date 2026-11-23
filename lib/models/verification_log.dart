@@ -5,6 +5,7 @@ class VerificationLog {
   final String fingerName;
   final bool isSuccess;
   final String details;
+  final String deviceName;
 
   const VerificationLog({
     required this.timestamp,
@@ -12,6 +13,7 @@ class VerificationLog {
     required this.fingerName,
     required this.isSuccess,
     required this.details,
+    this.deviceName = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -20,6 +22,7 @@ class VerificationLog {
         'fingerName': fingerName,
         'isSuccess': isSuccess,
         'details': details,
+        'deviceName': deviceName,
       };
 
   factory VerificationLog.fromJson(Map<String, dynamic> json) => VerificationLog(
@@ -28,6 +31,6 @@ class VerificationLog {
         fingerName: json['fingerName'] as String,
         isSuccess: json['isSuccess'] as bool,
         details: json['details'] as String,
+        deviceName: (json['deviceName'] as String?) ?? '',
       );
 }
-

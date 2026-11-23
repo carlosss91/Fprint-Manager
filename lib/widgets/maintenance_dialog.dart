@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../models/fprint_device_info.dart';
 import '../services/fprint_service.dart';
 import '../services/usb_maintenance_service.dart';
+import '../theme/app_theme.dart';
 
-/// Diálogo de mantenimiento avanzado para reiniciar el hardware USB, configurar permisos y verificar PAM.
+/// Diálogo integral de diagnóstico del sistema, permisos Polkit, PAM y reinicio hardware-agnóstico.
 class MaintenanceDialog extends StatefulWidget {
+  final FprintBackend backend;
   final VoidCallback onHardwareReset;
 
   const MaintenanceDialog({
     super.key,
+    required this.backend,
     required this.onHardwareReset,
   });
 
@@ -16,288 +21,156 @@ class MaintenanceDialog extends StatefulWidget {
 }
 
 class _MaintenanceDialogState extends State<MaintenanceDialog> {
-  bool _isPolkitConfigured = false;
-  bool _isPamConfigured = false;
+  SystemDiagnostics? _diag;
   bool _isLoading = true;
   bool _isOperating = false;
   String? _statusMessage;
+  String? _manualCommand;
+  bool _statusIsError = false;
 
   @override
   void initState() {
     super.initState();
-    _checkStatus();
+    _loadDiagnostics();
   }
 
-  Future<void> _checkStatus() async {
-    final polkit = await UsbMaintenanceService.isPolkitConfigured();
-    final pam = await FprintService.isPamAuthenticationEnabled();
-
-    if (mounted) {
-      setState(() {
-        _isPolkitConfigured = polkit;
-        _isPamConfigured = pam;
-        _isLoading = false;
-      });
-    }
+  Future<void> _loadDiagnostics() async {
+    setState(() => _isLoading = true);
+    final diag = await widget.backend.runDiagnostics();
+    if (!mounted) return;
+    setState(() {
+      _diag = diag;
+      _isLoading = false;
+    });
   }
 
   Future<void> _handlePolkitSetup() async {
     setState(() {
       _isOperating = true;
-      _statusMessage = 'Solicitando autorización para configurar Polkit...';
+      _manualCommand = null;
+      _statusIsError = false;
+      _statusMessage = 'Configurando regla Polkit para permisos biométricos...';
     });
 
-    final success = await UsbMaintenanceService.configurePermanentPermissions();
-    await _checkStatus();
+    final result = await UsbMaintenanceService.configurePermanentPermissions();
+    await _loadDiagnostics();
+    widget.onHardwareReset();
 
-    if (mounted) {
-      setState(() {
-        _isOperating = false;
-        _statusMessage = success
-            ? '¡Permisos configurados con éxito! Ya no se solicitarán contraseñas repetidas.'
-            : 'No se pudo aplicar la configuración de Polkit.';
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _isOperating = false;
+      _statusIsError = !result.success && result.manualCommand == null;
+      _statusMessage = result.message;
+      _manualCommand = result.manualCommand;
+    });
   }
 
   Future<void> _handlePamToggle() async {
-    final willEnable = !_isPamConfigured;
+    final current = _diag?.isPamEnabled ?? false;
+    final willEnable = !current;
     setState(() {
       _isOperating = true;
+      _manualCommand = null;
+      _statusIsError = false;
       _statusMessage = willEnable
-          ? 'Habilitando inicio de sesión con huella en el sistema (pam-auth-update)...'
-          : 'Deshabilitando inicio de sesión con huella en el sistema...';
+          ? 'Habilitando autenticación por huella en login y sudo...'
+          : 'Deshabilitando autenticación por huella en el sistema...';
     });
 
-    final success = await FprintService.setPamAuthenticationEnabled(willEnable);
-    await _checkStatus();
+    final result = await UsbMaintenanceService.setPamAuthenticationEnabled(willEnable);
+    await _loadDiagnostics();
     widget.onHardwareReset();
 
-    if (mounted) {
-      setState(() {
-        _isOperating = false;
-        _statusMessage = success
-            ? (willEnable
-                ? '¡Inicio de sesión, pantalla de bloqueo y sudo habilitados con huella!'
-                : 'Autenticación del sistema por huella deshabilitada.')
-            : 'Fallo al ejecutar pam-auth-update.';
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _isOperating = false;
+      _statusIsError = !result.success && result.manualCommand == null;
+      _statusMessage = result.message;
+      _manualCommand = result.manualCommand;
+    });
   }
 
   Future<void> _handleUsbReset() async {
     setState(() {
       _isOperating = true;
-      _statusMessage = 'Reiniciando el bus USB (Goodix 27c6:5395) y fprintd...';
+      _manualCommand = null;
+      _statusIsError = false;
+      _statusMessage = 'Reiniciando lectores USB detectados y servicio fprintd...';
     });
 
-    final success = await UsbMaintenanceService.resetUsbAndDaemon();
+    final result = await UsbMaintenanceService.resetUsbAndDaemon(_diag?.usbDevices);
+    await _loadDiagnostics();
     widget.onHardwareReset();
 
-    if (mounted) {
-      setState(() {
-        _isOperating = false;
-        _statusMessage = success
-            ? 'Bus USB y demonio reiniciados con éxito.'
-            : 'Fallo al reiniciar el bus USB.';
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _isOperating = false;
+      _statusIsError = !result.success && result.manualCommand == null;
+      _statusMessage = result.message;
+      _manualCommand = result.manualCommand;
+    });
+  }
+
+  Future<void> _copyToClipboard(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Comando copiado al portapapeles.'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final diag = _diag;
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.build_circle_outlined, color: Color(0xFF3584E4)),
-          SizedBox(width: 10),
-          Text('Mantenimiento y Permisos del Sensor', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          Icon(Icons.build_circle_outlined, color: AppColors.primary(context)),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Diagnóstico y Mantenimiento',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Actualizar diagnóstico',
+            onPressed: (_isLoading || _isOperating) ? null : _loadDiagnostics,
+            icon: const Icon(Icons.refresh_rounded, size: 19),
+          ),
         ],
       ),
       content: SizedBox(
-        width: 490,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Herramientas de recuperación para lectores biométricos (Goodix 27c6:5395 / Dell Precision 5540):',
-                style: TextStyle(fontSize: 13.5),
-              ),
-              const SizedBox(height: 16),
-
-              // Tarjeta de Permisos Polkit
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            _isPolkitConfigured ? Icons.verified_user_rounded : Icons.lock_outline_rounded,
-                            color: _isPolkitConfigured ? const Color(0xFF2EC27E) : const Color(0xFFE01B24),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _isPolkitConfigured
-                                  ? 'Permisos permanentes activados'
-                                  : 'Permisos sin configurar (pide contraseña frecuentemente)',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: _isPolkitConfigured ? const Color(0xFF2EC27E) : null,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Agrega una regla en /etc/polkit-1/rules.d para que el usuario pueda enrolar y borrar huellas sin diálogos repetitivos de autenticación.',
-                        style: TextStyle(fontSize: 12, color: theme.hintColor),
-                      ),
-                      const SizedBox(height: 10),
-                      FilledButton.tonalIcon(
-                        onPressed: (_isOperating || _isLoading) ? null : _handlePolkitSetup,
-                        icon: const Icon(Icons.security_rounded, size: 16),
-                        label: Text(_isPolkitConfigured ? 'Reaplicar Regla Polkit' : 'Autorizar Permisos Permanentes'),
-                      ),
+        width: 540,
+        child: _isLoading || diag == null
+            ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
+              )
+            : SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDiagnosticsCard(context, diag),
+                    const SizedBox(height: 12),
+                    _buildPolkitCard(context, diag),
+                    const SizedBox(height: 12),
+                    _buildPamCard(context, diag),
+                    const SizedBox(height: 12),
+                    _buildUsbResetCard(context, diag),
+                    if (_statusMessage != null) ...[
+                      const SizedBox(height: 14),
+                      _buildStatusFeedback(context),
                     ],
-                  ),
+                  ],
                 ),
               ),
-
-              const SizedBox(height: 12),
-
-              // Tarjeta de Integración PAM (Login & Sudo)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            _isPamConfigured ? Icons.login_rounded : Icons.warning_amber_rounded,
-                            color: _isPamConfigured ? const Color(0xFF2EC27E) : const Color(0xFFF5C211),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _isPamConfigured
-                                      ? 'Autenticación en el Sistema: Habilitada'
-                                      : 'Autenticación en el Sistema: Deshabilitada',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: _isPamConfigured ? const Color(0xFF2EC27E) : null,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _isPamConfigured
-                                      ? 'Las huellas registradas se usan para iniciar sesión en elementary OS (Pantheon), desbloquear pantalla y autorizar comandos "sudo".'
-                                      : 'Actualmente el sistema solo permite contraseña de texto. Habilita esta opción para usar el sensor biométrico.',
-                                  style: TextStyle(fontSize: 12, color: theme.hintColor),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      FilledButton.tonalIcon(
-                        onPressed: (_isOperating || _isLoading) ? null : _handlePamToggle,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _isPamConfigured
-                              ? const Color(0xFFE01B24).withValues(alpha: 0.12)
-                              : const Color(0xFF2EC27E).withValues(alpha: 0.15),
-                          foregroundColor: _isPamConfigured
-                              ? const Color(0xFFE01B24)
-                              : (isDark ? const Color(0xFF2EC27E) : const Color(0xFF1B824B)),
-                        ),
-                        icon: Icon(
-                          _isPamConfigured ? Icons.power_settings_new_rounded : Icons.check_circle_outline_rounded,
-                          size: 16,
-                        ),
-                        label: Text(
-                          _isPamConfigured
-                              ? 'Deshabilitar de Login y Sudo'
-                              : 'Habilitar en Login y Sudo (pam-auth-update)',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Tarjeta de Reinicio de Bus USB
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.usb_rounded, color: Color(0xFF3584E4), size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Reinicio de Bus USB de Bajo Nivel',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'En equipos Dell Precision 5540 el sensor Goodix (27c6:5395) puede quedar bloqueado por switches USB o suspensión. Esto fuerza un ciclo eléctrico de hardware con usbreset.',
-                        style: TextStyle(fontSize: 12, color: theme.hintColor),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        onPressed: (_isOperating || _isLoading) ? null : _handleUsbReset,
-                        icon: const Icon(Icons.restart_alt_rounded, size: 16),
-                        label: const Text('Reiniciar Bus USB del Lector'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              if (_statusMessage != null) ...[
-                const SizedBox(height: 14),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF333336) : const Color(0xFFEBF3FC),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _statusMessage!,
-                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
       ),
       actions: [
         TextButton(
@@ -305,6 +178,369 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
           child: const Text('Cerrar'),
         ),
       ],
+    );
+  }
+
+  Widget _buildDiagnosticsCard(BuildContext context, SystemDiagnostics diag) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.monitor_heart_outlined,
+                    size: 19, color: AppColors.primary(context)),
+                const SizedBox(width: 8),
+                const Text(
+                  'Estado del Entorno Linux',
+                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary(context).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    diag.isRunningInFlatpak ? 'Sandbox Flatpak' : 'Sesión Nativa',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _DiagRow(
+              label: 'Bus del sistema D-Bus (net.reactivated.Fprint)',
+              ok: diag.fprintdAvailable,
+              detail: diag.fprintdAvailable
+                  ? 'Conectado'
+                  : 'Inactivo o no instalado',
+            ),
+            _DiagRow(
+              label: 'Lectores expuestos por libfprint',
+              ok: diag.devices.isNotEmpty,
+              detail: diag.devices.isNotEmpty
+                  ? '${diag.devices.length} (${diag.devices.map((d) => d.name).join(", ")})'
+                  : 'Ninguno detectado',
+            ),
+            _DiagRow(
+              label: 'Sensores biométricos USB en sysfs',
+              ok: diag.usbDevices.isNotEmpty,
+              detail: diag.usbDevices.isNotEmpty
+                  ? diag.usbDevices.map((d) => '${d.vendorName} [${d.usbId}]').join(', ')
+                  : 'Sin lector USB (o lector interno SPI/I2C)',
+              neutralWhenFalse: true,
+            ),
+            _DiagRow(
+              label: 'Integración PAM (login, bloqueo y sudo)',
+              ok: diag.isPamEnabled,
+              detail: diag.isPamEnabled ? 'Habilitado' : 'Deshabilitado',
+              neutralWhenFalse: true,
+            ),
+            _DiagRow(
+              label: 'Regla Polkit sin contraseñas repetidas',
+              ok: diag.isPolkitRuleInstalled,
+              detail: diag.isPolkitRuleInstalled ? 'Instalada' : 'Por defecto',
+              neutralWhenFalse: true,
+            ),
+            if (!diag.fprintdAvailable) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.error(context).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.error(context).withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Paquetes del sistema necesarios si fprintd no está instalado:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.error(context),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const SelectableText(
+                      'Ubuntu / elementary OS / Debian:\n'
+                      '  sudo apt install fprintd libpam-fprintd\n'
+                      'Fedora:\n'
+                      '  sudo dnf install fprintd fprintd-pam\n'
+                      'Arch Linux:\n'
+                      '  sudo pacman -S fprintd',
+                      style: TextStyle(fontFamily: 'monospace', fontSize: 11.5),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPolkitCard(BuildContext context, SystemDiagnostics diag) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  diag.isPolkitRuleInstalled
+                      ? Icons.verified_user_rounded
+                      : Icons.lock_outline_rounded,
+                  color: diag.isPolkitRuleInstalled
+                      ? AppColors.success(context)
+                      : AppColors.warning(context),
+                  size: 19,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    diag.isPolkitRuleInstalled
+                        ? 'Permisos permanentes Polkit activos'
+                        : 'Permisos Polkit predeterminados',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Permite que usuarios del grupo administrativo registren o eliminen sus propias huellas sin repetir la contraseña en cada acción.',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+            ),
+            const SizedBox(height: 10),
+            FilledButton.tonalIcon(
+              onPressed: _isOperating ? null : _handlePolkitSetup,
+              icon: const Icon(Icons.security_rounded, size: 16),
+              label: Text(
+                diag.isRunningInFlatpak
+                    ? 'Ver comando de permisos para anfitrión'
+                    : (diag.isPolkitRuleInstalled
+                        ? 'Reaplicar regla Polkit'
+                        : 'Autorizar permisos permanentes'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPamCard(BuildContext context, SystemDiagnostics diag) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  diag.isPamEnabled
+                      ? Icons.login_rounded
+                      : Icons.shield_outlined,
+                  color: diag.isPamEnabled
+                      ? AppColors.success(context)
+                      : AppColors.warning(context),
+                  size: 19,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    diag.isPamEnabled
+                        ? 'Autenticación PAM activa (Login y sudo)'
+                        : 'Autenticación PAM desactivada',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              diag.isPamEnabled
+                  ? 'Las huellas registradas permiten iniciar sesión, desbloquear pantalla y autorizar sudo.'
+                  : 'Activa el módulo pam_fprintd para usar tu huella al iniciar sesión y en sudo.',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+            ),
+            const SizedBox(height: 10),
+            FilledButton.tonalIcon(
+              onPressed: _isOperating ? null : _handlePamToggle,
+              icon: Icon(
+                diag.isPamEnabled
+                    ? Icons.power_settings_new_rounded
+                    : Icons.check_circle_outline_rounded,
+                size: 16,
+              ),
+              label: Text(
+                diag.isPamEnabled
+                    ? 'Deshabilitar en Login y sudo'
+                    : 'Habilitar en Login y sudo',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUsbResetCard(BuildContext context, SystemDiagnostics diag) {
+    final usbSummary = diag.usbDevices.isNotEmpty
+        ? 'Detectado: ${diag.usbDevices.map((d) => "${d.productName} (${d.usbId})").join(", ")}.'
+        : 'No se detectaron sensores USB en sysfs (si es interno SPI/I2C, solo se reiniciará fprintd).';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.usb_rounded, color: AppColors.primary(context), size: 19),
+                const SizedBox(width: 8),
+                const Text(
+                  'Reinicio de Lector y Servicio fprintd',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Recupera lectores bloqueados tras suspensión o reconexión de docks USB. $usbSummary',
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _isOperating ? null : _handleUsbReset,
+              icon: const Icon(Icons.restart_alt_rounded, size: 16),
+              label: Text(
+                diag.isRunningInFlatpak
+                    ? 'Generar comando de reinicio para anfitrión'
+                    : 'Reiniciar lector y servicio fprintd',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusFeedback(BuildContext context) {
+    final accent = _statusIsError ? AppColors.error(context) : AppColors.primary(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _statusMessage!,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: _statusIsError ? accent : null,
+            ),
+          ),
+          if (_manualCommand != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.canvas(context),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border(context)),
+              ),
+              child: SelectableText(
+                _manualCommand!,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 11.5),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _copyToClipboard(_manualCommand!),
+                icon: const Icon(Icons.copy_rounded, size: 15),
+                label: const Text('Copiar comando'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DiagRow extends StatelessWidget {
+  final String label;
+  final bool ok;
+  final String detail;
+  final bool neutralWhenFalse;
+
+  const _DiagRow({
+    required this.label,
+    required this.ok,
+    required this.detail,
+    this.neutralWhenFalse = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ok
+        ? AppColors.success(context)
+        : (neutralWhenFalse ? AppColors.warning(context) : AppColors.error(context));
+    final icon = ok
+        ? Icons.check_circle_rounded
+        : (neutralWhenFalse ? Icons.info_rounded : Icons.error_rounded);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3.5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: DefaultTextStyle.of(context).style.copyWith(fontSize: 12),
+                children: [
+                  TextSpan(text: '$label: '),
+                  TextSpan(
+                    text: detail,
+                    style: TextStyle(fontWeight: FontWeight.w600, color: color),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

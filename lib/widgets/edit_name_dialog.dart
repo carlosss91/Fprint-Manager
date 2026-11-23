@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/fingerprint_item.dart';
+import '../theme/app_theme.dart';
 
-/// Diálogo minimalista estilo elementary OS para editar el nombre o apodo de una huella registrada.
+/// Diálogo minimalista estilo elementary OS para editar el apodo de una huella registrada.
 class EditNameDialog extends StatefulWidget {
   final FingerprintItem item;
   final ValueChanged<String> onSaved;
@@ -45,37 +46,47 @@ class _EditNameDialogState extends State<EditNameDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isCustomized = widget.item.name != widget.item.fingerName;
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.edit_outlined, color: Color(0xFF3584E4), size: 22),
-          SizedBox(width: 10),
-          Text('Personalizar Nombre de Huella', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          Icon(Icons.edit_outlined, color: AppColors.primary(context), size: 22),
+          const SizedBox(width: 10),
+          const Text(
+            'Personalizar Nombre de Huella',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
         ],
       ),
       content: SizedBox(
-        width: 380,
+        width: 390,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              runSpacing: 4,
               children: [
-                const Text('Dedo asignado: ', style: TextStyle(fontSize: 12.5, color: Colors.grey)),
+                Text(
+                  'Dedo asignado:',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.textSecondary(context),
+                  ),
+                ),
                 Text(
                   widget.item.fingerName,
                   style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
+                    color: AppColors.sidebar(context),
                     borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: AppColors.border(context)),
                   ),
                   child: Text(
                     widget.item.fingerCode,
@@ -117,7 +128,10 @@ class _EditNameDialogState extends State<EditNameDialog> {
                   ),
                   onPressed: _resetToDefault,
                   icon: const Icon(Icons.restore_rounded, size: 16),
-                  label: const Text('Restablecer al nombre estándar del sistema', style: TextStyle(fontSize: 12)),
+                  label: const Text(
+                    'Restablecer al nombre estándar del sistema',
+                    style: TextStyle(fontSize: 12),
+                  ),
                 ),
               ),
             ],
@@ -130,10 +144,6 @@ class _EditNameDialogState extends State<EditNameDialog> {
           child: const Text('Cancelar'),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF3584E4),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
           onPressed: _save,
           child: const Text('Guardar'),
         ),
@@ -141,4 +151,3 @@ class _EditNameDialogState extends State<EditNameDialog> {
     );
   }
 }
-

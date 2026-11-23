@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/verification_log.dart';
+import '../theme/app_theme.dart';
 
-/// Diálogo minimalista para inspeccionar el historial de intentos de verificación biométrica de la sesión.
+/// Diálogo para inspeccionar el historial de verificaciones biométricas de la sesión.
 class VerificationHistoryDialog extends StatelessWidget {
   final List<VerificationLog> logs;
   final VoidCallback onClearLogs;
@@ -22,21 +23,23 @@ class VerificationHistoryDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
-          const Icon(Icons.history_rounded, color: Color(0xFF3584E4), size: 22),
+          Icon(Icons.history_rounded, color: AppColors.primary(context), size: 22),
           const SizedBox(width: 10),
-          const Text('Historial de Verificaciones', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          const Spacer(),
+          const Expanded(
+            child: Text(
+              'Historial de Verificaciones',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
+          ),
           if (logs.isNotEmpty)
             TextButton.icon(
               style: TextButton.styleFrom(
                 visualDensity: VisualDensity.compact,
-                foregroundColor: const Color(0xFFE01B24),
+                foregroundColor: AppColors.error(context),
               ),
               onPressed: onClearLogs,
               icon: const Icon(Icons.delete_sweep_outlined, size: 16),
@@ -45,7 +48,7 @@ class VerificationHistoryDialog extends StatelessWidget {
         ],
       ),
       content: SizedBox(
-        width: 440,
+        width: 460,
         height: 380,
         child: logs.isEmpty
             ? Center(
@@ -54,12 +57,18 @@ class VerificationHistoryDialog extends StatelessWidget {
                   children: [
                     Icon(Icons.rule_folder_outlined, size: 44, color: theme.disabledColor),
                     const SizedBox(height: 10),
-                    const Text('Sin actividad registrada', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    const Text(
+                      'Sin actividad registrada',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
                     const SizedBox(height: 4),
                     Text(
-                      'Cada vez que pruebes el sensor físico con "fprintd-verify", los resultados quedarán registrados aquí.',
+                      'Cada vez que pruebes el sensor biométrico, los resultados quedarán registrados aquí.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: theme.hintColor, fontSize: 12.5),
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 12.5,
+                      ),
                     ),
                   ],
                 ),
@@ -68,26 +77,25 @@ class VerificationHistoryDialog extends StatelessWidget {
                 itemCount: logs.length,
                 separatorBuilder: (context, index) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
-                  // Mostrar más recientes primero
                   final log = logs[logs.length - 1 - index];
                   final isSuccess = log.isSuccess;
+                  final statusColor =
+                      isSuccess ? AppColors.success(context) : AppColors.error(context);
 
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF262629) : const Color(0xFFF8F9FA),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.sidebar(context),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isSuccess
-                            ? const Color(0xFF2EC27E).withValues(alpha: 0.3)
-                            : const Color(0xFFE01B24).withValues(alpha: 0.3),
+                        color: statusColor.withValues(alpha: 0.30),
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           isSuccess ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                          color: isSuccess ? const Color(0xFF2EC27E) : const Color(0xFFE01B24),
+                          color: statusColor,
                           size: 20,
                         ),
                         const SizedBox(width: 10),
@@ -97,27 +105,35 @@ class VerificationHistoryDialog extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  Text(
-                                    log.fingerName,
-                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                  Expanded(
+                                    child: Text(
+                                      log.fingerName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  const Spacer(),
+                                  const SizedBox(width: 8),
                                   Text(
                                     _formatTime(log.timestamp),
-                                    style: TextStyle(
+                                    style: AppTheme.tabularFiguresStyle.copyWith(
                                       fontSize: 11,
                                       fontFamily: 'monospace',
-                                      color: isDark ? Colors.white54 : Colors.black45,
+                                      color: AppColors.textSecondary(context),
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                log.details,
+                                log.deviceName.isNotEmpty
+                                    ? '${log.details} • ${log.deviceName}'
+                                    : log.details,
                                 style: TextStyle(
                                   fontSize: 11.5,
-                                  color: isDark ? Colors.white70 : Colors.black87,
+                                  color: AppColors.textSecondary(context),
                                 ),
                               ),
                             ],

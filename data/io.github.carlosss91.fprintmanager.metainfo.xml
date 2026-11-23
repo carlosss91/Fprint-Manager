@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.carlosss91.fprintmanager</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Fprint-Manager</name>
+  <summary>Manage fingerprint readers and enrolled prints cleanly</summary>
+  <summary xml:lang="es">Gestiona lectores biométricos y huellas registradas fácilmente</summary>
+
+  <developer id="io.github.carlosss91">
+    <name>Carlos</name>
+  </developer>
+
+  <launchable type="desktop-id">io.github.carlosss91.fprintmanager.desktop</launchable>
+  <provides>
+    <binary>fprint_manager</binary>
+  </provides>
+
+  <description>
+    <p>
+      Fprint-Manager is a clean, hardware-agnostic Linux desktop utility designed for elementary OS
+      and GTK environments to enroll, test, rename, and manage fingerprint readers backed by
+      fprintd and libfprint over D-Bus.
+    </p>
+    <p xml:lang="es">
+      Fprint-Manager es una utilidad de escritorio Linux minimalista pensada para elementary OS
+      y entornos GTK que permite registrar, verificar, renombrar y administrar lectores de huellas
+      compatibles con fprintd y libfprint mediante D-Bus.
+    </p>
+    <ul>
+      <li>Works with any libfprint-supported optical, capacitive, or match-on-chip reader</li>
+      <li>Interactive multi-stage enrollment progress ring and live verification feedback</li>
+      <li>Custom local aliases, verification history log, and PAM/Polkit diagnostics</li>
+    </ul>
+  </description>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#3689e6</color>
+    <color type="primary" scheme_preference="dark">#1c4e8a</color>
+  </branding>
+
+  <custom>
+    <value key="x-appcenter-color-primary">#3689e6</value>
+    <value key="x-appcenter-color-primary-text">#ffffff</value>
+    <value key="x-appcenter-suggested-price">0</value>
+  </custom>
+
+  <content_rating type="oars-1.1" />
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <requires>
+    <display_length compare="ge">540</display_length>
+  </requires>
+
+  <url type="homepage">https://github.com/carlosss91/Fprint-Manager</url>
+  <url type="bugtracker">https://github.com/carlosss91/Fprint-Manager/issues</url>
+  <url type="vcs-browser">https://github.com/carlosss91/Fprint-Manager</url>
+  <url type="donation">https://paypal.me/chals911</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Fprint-Manager main window with enrolled prints and live sensor scanner</caption>
+      <caption xml:lang="es">Ventana principal de Fprint-Manager con huellas registradas y escáner en vivo</caption>
+      <image type="source" width="1080" height="700">https://raw.githubusercontent.com/carlosss91/Fprint-Manager/main/data/screenshots/main-window.png</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="1.0.0" date="2026-11-20">
+      <description>
+        <p>Initial release with universal D-Bus fprintd support, interactive enrollment animations, custom aliases, verification audit log, and AppCenter Flatpak packaging.</p>
+        <p xml:lang="es">Lanzamiento inicial con soporte universal D-Bus para fprintd, animaciones de registro interactivas, apodos personalizados, historial y empaquetado Flatpak para AppCenter.</p>
+      </description>
+    </release>
+  </releases>
+</component>
+
