@@ -66,7 +66,7 @@
     <screenshot type="default">
       <caption>Fprint-Manager main window with enrolled prints and live sensor scanner</caption>
       <caption xml:lang="es">Ventana principal de Fprint-Manager con huellas registradas y escáner en vivo</caption>
-      <image type="source" width="1080" height="700">https://raw.githubusercontent.com/carlosss91/Fprint-Manager/main/data/screenshots/main-window.png</image>
+      <image type="source" width="2083" height="1401">https://raw.githubusercontent.com/carlosss91/Fprint-Manager/main/data/screenshots/main-window.png</image>
     </screenshot>
   </screenshots>
 
