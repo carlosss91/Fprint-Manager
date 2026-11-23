@@ -2,6 +2,8 @@ id: io.github.carlosss91.fprintmanager
 runtime: io.elementary.Platform
 runtime-version: '8.2'
 sdk: io.elementary.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.llvm19
 command: fprint_manager
 
 finish-args:
@@ -15,9 +17,18 @@ finish-args:
 modules:
   - name: fprint-manager
     buildsystem: simple
+    build-options:
+      env:
+        PUB_CACHE: /run/build/fprint-manager/.pub-cache
+        CC: clang
+        CXX: clang++
+      append-path: /run/build/fprint-manager/flutter/bin:/usr/lib/sdk/llvm19/bin
     build-commands:
+      - flutter config --no-analytics
+      - flutter pub get --offline
+      - flutter build linux --release --no-pub
       - mkdir -p /app/lib/fprint_manager /app/bin /app/share/applications /app/share/metainfo /app/share/icons/hicolor/scalable/apps
-      - cp -a bundle/* /app/lib/fprint_manager/
+      - cp -a build/linux/x64/release/bundle/* /app/lib/fprint_manager/
       - chmod +x /app/lib/fprint_manager/fprint_manager
       - |
         cat << 'EOF' > /app/bin/fprint_manager
@@ -29,16 +40,12 @@ modules:
       - install -Dm644 data/io.github.carlosss91.fprintmanager.metainfo.xml /app/share/metainfo/io.github.carlosss91.fprintmanager.metainfo.xml
       - install -Dm644 data/icons/io.github.carlosss91.fprintmanager.svg /app/share/icons/hicolor/scalable/apps/io.github.carlosss91.fprintmanager.svg
     sources:
-      - type: dir
-        path: ../build/linux/x64/release/bundle
-        dest: bundle
-      - type: file
-        path: ../data/io.github.carlosss91.fprintmanager.desktop
-        dest: data
-      - type: file
-        path: ../data/io.github.carlosss91.fprintmanager.metainfo.xml
-        dest: data
-      - type: file
-        path: ../data/icons/io.github.carlosss91.fprintmanager.svg
-        dest: data/icons
-
+      # Para envío final a AppCenter / Flathub, fija `tag: v1.0.0` y su `commit:`
+      - type: git
+        url: https://github.com/carlosss91/Fprint-Manager.git
+        branch: main
+      - type: archive
+        url: https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.2-stable.tar.xz
+        sha256: 447878859d01ca9bfdb99a85f245af07ed8a15fedcd9d189c4749e8e92d1f185
+        dest: flutter
+      - pubspec-sources.json
