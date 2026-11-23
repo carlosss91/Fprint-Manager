@@ -1,9 +1,9 @@
 id: io.github.carlosss91.fprintmanager
-runtime: io.elementary.Platform
-runtime-version: '8.2'
-sdk: io.elementary.Sdk
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
 sdk-extensions:
-  - org.freedesktop.Sdk.Extension.llvm19
+  - org.freedesktop.Sdk.Extension.llvm20
 command: fprint_manager
 
 finish-args:
@@ -22,7 +22,7 @@ modules:
         PUB_CACHE: /run/build/fprint-manager/.pub-cache
         CC: clang
         CXX: clang++
-      append-path: /run/build/fprint-manager/flutter/bin:/usr/lib/sdk/llvm19/bin
+      append-path: /run/build/fprint-manager/flutter/bin:/usr/lib/sdk/llvm20/bin
     build-commands:
       - flutter config --no-analytics
       - flutter pub get --offline
