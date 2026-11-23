@@ -40,10 +40,9 @@ modules:
       - install -Dm644 data/io.github.carlosss91.fprintmanager.metainfo.xml /app/share/metainfo/io.github.carlosss91.fprintmanager.metainfo.xml
       - install -Dm644 data/icons/io.github.carlosss91.fprintmanager.svg /app/share/icons/hicolor/scalable/apps/io.github.carlosss91.fprintmanager.svg
     sources:
-      # Para envío final a AppCenter / Flathub, fija `tag: v1.0.0` y su `commit:`
       - type: git
         url: https://github.com/carlosss91/Fprint-Manager.git
-        branch: main
+        tag: v1.0.0
       - type: archive
         url: https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.2-stable.tar.xz
         sha256: 447878859d01ca9bfdb99a85f245af07ed8a15fedcd9d189c4749e8e92d1f185
