@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/monetization_config.dart';
+import '../l10n/app_localizations.dart';
 import '../models/monetization_models.dart';
 import '../services/monetization_service.dart';
 import '../theme/app_theme.dart';
@@ -44,10 +45,10 @@ class _SupportDialogState extends State<SupportDialog> {
   Future<void> _openDonation() async {
     final launched = await widget.backend.openExternalUrl(MonetizationConfig.donationUrl);
     if (!mounted || launched) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _feedbackIsError = true;
-      _feedbackMessage =
-          'No se pudo abrir el navegador. Visita manualmente: ${MonetizationConfig.donationUrl}';
+      _feedbackMessage = l10n.supportOpenBrowserError(MonetizationConfig.donationUrl);
     });
   }
 
@@ -55,10 +56,10 @@ class _SupportDialogState extends State<SupportDialog> {
     final launched =
         await widget.backend.openExternalUrl(MonetizationConfig.removeAdsCheckoutUrl);
     if (!mounted || launched) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _feedbackIsError = true;
-      _feedbackMessage =
-          'No se pudo abrir la página de compra: ${MonetizationConfig.removeAdsCheckoutUrl}';
+      _feedbackMessage = l10n.supportOpenCheckoutError(MonetizationConfig.removeAdsCheckoutUrl);
     });
   }
 
@@ -90,17 +91,19 @@ class _SupportDialogState extends State<SupportDialog> {
       provider: MonetizationConfig.licenseProvider,
     );
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _licenseState = inactive;
       _keyController.clear();
       _feedbackIsError = false;
-      _feedbackMessage = 'Licencia eliminada de este equipo.';
+      _feedbackMessage = l10n.supportLicenseRemoved;
     });
     widget.onLicenseChanged(inactive);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       title: Row(
         children: [
@@ -113,10 +116,10 @@ class _SupportDialogState extends State<SupportDialog> {
                 : AppColors.primary(context),
           ),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Apoyar Fprint-Manager',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              l10n.supportTitle,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -128,9 +131,9 @@ class _SupportDialogState extends State<SupportDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDonationCard(context),
+              _buildDonationCard(context, l10n),
               const SizedBox(height: 12),
-              _buildLicenseCard(context),
+              _buildLicenseCard(context, l10n),
               if (_feedbackMessage != null) ...[
                 const SizedBox(height: 12),
                 _buildFeedbackBanner(context),
@@ -142,13 +145,13 @@ class _SupportDialogState extends State<SupportDialog> {
       actions: [
         TextButton(
           onPressed: _isActivating ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cerrar'),
+          child: Text(l10n.closeBtn),
         ),
       ],
     );
   }
 
-  Widget _buildDonationCard(BuildContext context) {
+  Widget _buildDonationCard(BuildContext context, AppLocalizations l10n) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -159,24 +162,24 @@ class _SupportDialogState extends State<SupportDialog> {
               children: [
                 Icon(Icons.coffee_outlined, size: 19, color: AppColors.primary(context)),
                 const SizedBox(width: 8),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Donación voluntaria (PayPal / Ko-fi)',
-                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                    l10n.supportDonationTitle,
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              'Fprint-Manager es software libre sin bloqueos funcionales. Si te resulta útil, puedes invitar a un café o enviar un aporte directo.',
+              l10n.supportDonationDesc,
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 10),
             FilledButton.tonalIcon(
               onPressed: _openDonation,
               icon: const Icon(Icons.open_in_new_rounded, size: 16),
-              label: const Text('Donar con PayPal / Ko-fi'),
+              label: Text(l10n.supportDonateBtn),
             ),
           ],
         ),
@@ -184,7 +187,7 @@ class _SupportDialogState extends State<SupportDialog> {
     );
   }
 
-  Widget _buildLicenseCard(BuildContext context) {
+  Widget _buildLicenseCard(BuildContext context, AppLocalizations l10n) {
     if (_licenseState.isSupporter) {
       return Card(
         child: Padding(
@@ -199,7 +202,7 @@ class _SupportDialogState extends State<SupportDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Licencia Supporter Activa',
+                      l10n.supportLicenseActiveTitle,
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
@@ -211,14 +214,14 @@ class _SupportDialogState extends State<SupportDialog> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Clave: ${_licenseState.maskedKey}',
+                l10n.supportLicenseKeyLabel(_licenseState.maskedKey),
                 style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
               ),
               if (_licenseState.customerEmail != null &&
                   _licenseState.customerEmail!.isNotEmpty) ...[
                 const SizedBox(height: 3),
                 Text(
-                  'Titular: ${_licenseState.customerEmail}',
+                  l10n.supportLicenseHolderLabel(_licenseState.customerEmail!),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary(context),
@@ -229,7 +232,7 @@ class _SupportDialogState extends State<SupportDialog> {
               OutlinedButton.icon(
                 onPressed: _deactivateLicense,
                 icon: const Icon(Icons.link_off_rounded, size: 16),
-                label: const Text('Desactivar en este equipo'),
+                label: Text(l10n.supportDeactivateBtn),
               ),
             ],
           ),
@@ -250,7 +253,7 @@ class _SupportDialogState extends State<SupportDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Quitar anuncios (${MonetizationConfig.removeAdsPriceLabel})',
+                    l10n.supportRemoveAdsTitle(MonetizationConfig.removeAdsPriceLabel),
                     style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -258,7 +261,7 @@ class _SupportDialogState extends State<SupportDialog> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Pago único con tarjeta o PayPal. Recibirás al instante una clave de licencia para ocultar el banner en tu equipo.',
+              l10n.supportRemoveAdsDesc,
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 10),
@@ -266,7 +269,7 @@ class _SupportDialogState extends State<SupportDialog> {
               onPressed: _openCheckout,
               icon: const Icon(Icons.shopping_bag_outlined, size: 16),
               label: Text(
-                'Obtener clave (${MonetizationConfig.removeAdsPriceLabel})',
+                l10n.supportGetKeyBtn(MonetizationConfig.removeAdsPriceLabel),
               ),
             ),
             const SizedBox(height: 14),
@@ -274,8 +277,8 @@ class _SupportDialogState extends State<SupportDialog> {
               controller: _keyController,
               enabled: !_isActivating,
               decoration: InputDecoration(
-                labelText: 'Clave de licencia Supporter',
-                hintText: 'Pega aquí tu clave',
+                labelText: l10n.supportKeyFieldLabel,
+                hintText: l10n.supportKeyFieldHint,
                 isDense: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
@@ -293,7 +296,7 @@ class _SupportDialogState extends State<SupportDialog> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.key_rounded, size: 16),
-                label: Text(_isActivating ? 'Validando...' : 'Activar licencia'),
+                label: Text(_isActivating ? l10n.supportValidatingBtn : l10n.supportActivateBtn),
               ),
             ),
           ],

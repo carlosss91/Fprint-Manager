@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/monetization_config.dart';
+import '../l10n/app_localizations.dart';
 import '../models/monetization_models.dart';
 import '../theme/app_theme.dart';
 
@@ -60,9 +61,10 @@ class _SponsorBannerState extends State<SponsorBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final primary = AppColors.primary(context);
-    final labelText = widget.ad.isFallbackHouseAd ? 'Proyecto Indie' : 'EthicalAds';
+    final labelText = widget.ad.isFallbackHouseAd ? l10n.bannerIndieLabel : 'EthicalAds';
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -127,7 +129,7 @@ class _SponsorBannerState extends State<SponsorBanner> {
               ),
               onPressed: widget.onRemoveAds,
               child: Text(
-                'Quitar (${MonetizationConfig.removeAdsPriceLabel})',
+                l10n.bannerRemoveBtn(MonetizationConfig.removeAdsPriceLabel),
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
               ),
             ),

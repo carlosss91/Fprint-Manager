@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/l10n_ext.dart';
 import '../models/fingerprint_item.dart';
 import '../theme/app_theme.dart';
 
@@ -46,16 +48,21 @@ class _EditNameDialogState extends State<EditNameDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isCustomized = widget.item.name != widget.item.fingerName;
+    final l10n = AppLocalizations.of(context)!;
+    final localizedFingerName = l10n.fingerDisplayName(widget.item.fingerCode);
+    final isCustomized =
+        widget.item.name != widget.item.fingerName && widget.item.name != localizedFingerName;
 
     return AlertDialog(
       title: Row(
         children: [
           Icon(Icons.edit_outlined, color: AppColors.primary(context), size: 22),
           const SizedBox(width: 10),
-          const Text(
-            'Personalizar Nombre de Huella',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          Expanded(
+            child: Text(
+              l10n.editNameTitle,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -71,14 +78,14 @@ class _EditNameDialogState extends State<EditNameDialog> {
               runSpacing: 4,
               children: [
                 Text(
-                  'Dedo asignado:',
+                  l10n.assignedFingerLabel,
                   style: TextStyle(
                     fontSize: 12.5,
                     color: AppColors.textSecondary(context),
                   ),
                 ),
                 Text(
-                  widget.item.fingerName,
+                  localizedFingerName,
                   style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
                 ),
                 Container(
@@ -96,21 +103,21 @@ class _EditNameDialogState extends State<EditNameDialog> {
               ],
             ),
             const SizedBox(height: 14),
-            const Text(
-              'Nombre o etiqueta descriptiva:',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            Text(
+              l10n.customNameLabel,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _controller,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: 'Ej. Dedo principal para sudo',
+                hintText: l10n.customNameHint,
                 isDense: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 suffixIcon: IconButton(
-                  tooltip: 'Limpiar campo',
+                  tooltip: l10n.clearFieldTooltip,
                   icon: const Icon(Icons.clear, size: 18),
                   onPressed: () => _controller.clear(),
                 ),
@@ -128,9 +135,9 @@ class _EditNameDialogState extends State<EditNameDialog> {
                   ),
                   onPressed: _resetToDefault,
                   icon: const Icon(Icons.restore_rounded, size: 16),
-                  label: const Text(
-                    'Restablecer al nombre estándar del sistema',
-                    style: TextStyle(fontSize: 12),
+                  label: Text(
+                    l10n.restoreOriginalBtn(localizedFingerName),
+                    style: const TextStyle(fontSize: 12),
                   ),
                 ),
               ),
@@ -141,11 +148,11 @@ class _EditNameDialogState extends State<EditNameDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(l10n.cancelBtn),
         ),
         FilledButton(
           onPressed: _save,
-          child: const Text('Guardar'),
+          child: Text(l10n.saveBtn),
         ),
       ],
     );

@@ -256,7 +256,7 @@ void main() {
     setDesktopWindow(tester);
     final backend = FakeFprintBackend();
 
-    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend()));
+    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend(), locale: const Locale('es')));
     await tester.pumpAndSettle();
 
     expect(find.text('Fprint-Manager'), findsOneWidget);
@@ -272,7 +272,7 @@ void main() {
     setDesktopWindow(tester);
     final backend = FakeFprintBackend();
 
-    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend()));
+    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend(), locale: const Locale('es')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Agregar'));
@@ -319,7 +319,7 @@ void main() {
     setDesktopWindow(tester);
     final backend = FakeFprintBackend();
 
-    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend()));
+    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend(), locale: const Locale('es')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Verificar huella'));
@@ -382,7 +382,7 @@ void main() {
       errorToReturn: 'No compatible device',
     );
 
-    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend()));
+    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend(), locale: const Locale('es')));
     await tester.pumpAndSettle();
     expect(find.text('No se detectó ningún lector de huellas'), findsOneWidget);
     expect(find.text('Reintentar detección'), findsOneWidget);
@@ -405,7 +405,7 @@ void main() {
           size: Size(600, 580),
           disableAnimations: true,
         ),
-        child: FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend()),
+        child: FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend(), locale: const Locale('es')),
       ),
     );
     await tester.pumpAndSettle();
@@ -423,7 +423,7 @@ void main() {
     setDesktopWindow(tester);
     final backend = FakeFprintBackend();
 
-    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend()));
+    await tester.pumpWidget(FprintManagerApp(backend: backend, monetizationBackend: FakeMonetizationBackend(), locale: const Locale('es')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.edit_outlined).first);
@@ -447,6 +447,7 @@ void main() {
       FprintManagerApp(
         backend: backend,
         monetizationBackend: monetization,
+        locale: const Locale('es'),
       ),
     );
     await tester.pumpAndSettle();
@@ -476,6 +477,7 @@ void main() {
       FprintManagerApp(
         backend: backend,
         monetizationBackend: monetization,
+        locale: const Locale('es'),
       ),
     );
     await tester.pumpAndSettle();
@@ -511,6 +513,7 @@ void main() {
       FprintManagerApp(
         backend: backend,
         monetizationBackend: monetization,
+        locale: const Locale('es'),
       ),
     );
     await tester.pumpAndSettle();
@@ -547,5 +550,25 @@ void main() {
     await tester.tap(find.byIcon(Icons.light_mode_outlined));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.dark_mode_outlined), findsOneWidget);
+  });
+
+  testWidgets('English locale renders localized UI strings automatically',
+      (WidgetTester tester) async {
+    setDesktopWindow(tester);
+    final backend = FakeFprintBackend();
+
+    await tester.pumpWidget(
+      FprintManagerApp(
+        backend: backend,
+        monetizationBackend: FakeMonetizationBackend(),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enrolled Fingerprints'), findsOneWidget);
+    expect(find.text('Right Index'), findsOneWidget);
+    expect(find.text('Left Thumb'), findsOneWidget);
+    expect(find.text('Verify fingerprint'), findsOneWidget);
   });
 }

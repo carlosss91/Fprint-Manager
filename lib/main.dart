@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'config/monetization_config.dart';
+import 'l10n/app_localizations.dart';
+import 'l10n/l10n_ext.dart';
 import 'models/fprint_device_info.dart';
 import 'models/fingerprint_item.dart';
 import 'models/monetization_models.dart';
@@ -27,11 +29,13 @@ void main() {
 class FprintManagerApp extends StatefulWidget {
   final FprintBackend? backend;
   final MonetizationBackend? monetizationBackend;
+  final Locale? locale;
 
   const FprintManagerApp({
     super.key,
     this.backend,
     this.monetizationBackend,
+    this.locale,
   });
 
   @override
@@ -76,6 +80,9 @@ class _FprintManagerAppState extends State<FprintManagerApp> {
     return MaterialApp(
       title: 'Fprint-Manager',
       debugShowCheckedModeBanner: false,
+      locale: widget.locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       themeMode: _themeMode,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
@@ -237,12 +244,13 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   String _defaultIdlePrompt(FprintDeviceInfo device) {
+    final l10n = AppLocalizations.of(context);
     if (_fingerprints.isEmpty) {
-      return 'Aún no tienes huellas registradas en ${device.name}. Añade una desde el panel lateral.';
+      return l10n?.promptIdleNoPrints ??
+          'Aún no tienes huellas registradas en ${device.name}.';
     }
-    return device.scanType == ScanType.swipe
-        ? 'Pulsa el lector o Espacio y desliza tu dedo para verificar.'
-        : 'Pulsa el lector o Espacio y coloca tu dedo para verificar.';
+    return l10n?.promptIdleAuto ??
+        'Pulsa "Verificar huella" o Espacio para probar cualquiera de tus dedos.';
   }
 
   Future<void> _selectDevice(FprintDeviceInfo device) async {
@@ -283,9 +291,10 @@ class _FprintHomePageState extends State<FprintHomePage> {
     }
 
     if (_fingerprints.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registra al menos una huella antes de verificar.'),
+        SnackBar(
+          content: Text(l10n.noPrintsToVerify),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -293,6 +302,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
     }
 
     _resetTimer?.cancel();
+    final l10n = AppLocalizations.of(context)!;
     final targetCode = _selectedVerifyFingerCode;
     final targetLabel = _resolveFingerDisplayName(targetCode);
 
@@ -301,8 +311,8 @@ class _FprintHomePageState extends State<FprintHomePage> {
       _fingerPresent = false;
       _lastMatchedFingerName = null;
       _sensorStatusText = targetCode == kAnyFingerCode
-          ? 'Sensor activo (detección automática). Apoya cualquiera de tus huellas...'
-          : 'Sensor activo (-f $targetCode). Apoya "$targetLabel" en el lector...';
+          ? l10n.promptScanningAuto
+          : l10n.promptScanningTarget(targetCode, targetLabel);
     });
 
     try {
@@ -352,15 +362,15 @@ class _FprintHomePageState extends State<FprintHomePage> {
                 _lastMatchedFingerName =
                     hasSpecificFinger ? effectiveMatchedName : null;
                 _sensorStatusText = hasSpecificFinger
-                    ? '¡Huella verificada con éxito!\nHuella detectada: $effectiveMatchedName'
-                    : '¡Huella verificada con éxito!\nCoincidencia con una de tus ${_fingerprints.length} huellas registradas (fprintd no informa el dedo en modo automático).';
+                    ? l10n.verifyMatchDetected(effectiveMatchedName)
+                    : l10n.verifyMatchAutoUnknown(_fingerprints.length);
                 _verificationLogs.add(
                   VerificationLog(
                     timestamp: DateTime.now(),
                     fingerCode: effectiveMatchedCode,
                     fingerName: effectiveMatchedName,
                     isSuccess: true,
-                    details: 'verify-match • Lectura verificada',
+                    details: 'verify-match',
                     deviceName: device.name,
                   ),
                 );
@@ -373,15 +383,15 @@ class _FprintHomePageState extends State<FprintHomePage> {
                 _sensorState = SensorState.error;
                 _fingerPresent = false;
                 _sensorStatusText = targetCode == kAnyFingerCode
-                    ? 'La huella no coincide con ninguna registrada. Intenta de nuevo.'
-                    : 'La huella no coincide con "$targetLabel". Intenta de nuevo.';
+                    ? l10n.verifyNoMatchAny
+                    : l10n.verifyNoMatchTarget(targetLabel);
                 _verificationLogs.add(
                   VerificationLog(
                     timestamp: DateTime.now(),
                     fingerCode: matchedCode,
                     fingerName: matchedName,
                     isSuccess: false,
-                    details: 'verify-no-match • Sin coincidencia',
+                    details: 'verify-no-match',
                     deviceName: device.name,
                   ),
                 );
@@ -405,7 +415,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
           setState(() {
             _sensorState = SensorState.error;
             _fingerPresent = false;
-            _sensorStatusText = 'Error en verificación: $err';
+            _sensorStatusText = l10n.verifyErrorPrefix('$err');
           });
           _activeVerifySession = null;
           _scheduleReset();
@@ -423,13 +433,18 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   String _resolveFingerDisplayName(String code) {
+    final l10n = AppLocalizations.of(context);
     if (code == kAnyFingerCode) {
-      return FingerprintItem.getFriendlyName(kAnyFingerCode);
+      return l10n?.fingerAny ?? FingerprintItem.getFriendlyName(kAnyFingerCode);
     }
     for (final f in _fingerprints) {
-      if (f.fingerCode == code) return f.name;
+      if (f.fingerCode == code) {
+        return f.name == f.fingerName && l10n != null
+            ? l10n.fingerDisplayName(code)
+            : f.name;
+      }
     }
-    return FingerprintItem.getFriendlyName(code);
+    return l10n?.fingerDisplayName(code) ?? FingerprintItem.getFriendlyName(code);
   }
 
   Future<void> _cancelActiveVerification({bool silent = false}) async {
@@ -444,7 +459,8 @@ class _FprintHomePageState extends State<FprintHomePage> {
       _sensorState =
           _hardwareStatus == HardwareStatus.ready ? SensorState.idle : SensorState.unavailable;
       if (_activeDevice != null) {
-        _sensorStatusText = 'Verificación cancelada. Pulsa para iniciar.';
+        final l10n = AppLocalizations.of(context)!;
+        _sensorStatusText = l10n.verifyCancelledPrompt;
       }
     });
   }
@@ -475,9 +491,12 @@ class _FprintHomePageState extends State<FprintHomePage> {
           await widget.backend.updateFingerName(item.fingerCode, newName);
           await _refreshAll();
           if (mounted) {
+            final l10n = AppLocalizations.of(context)!;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Nombre de "${item.fingerName}" actualizado a "$newName".'),
+                content: Text(
+                  l10n.aliasUpdated(l10n.fingerDisplayName(item.fingerCode), newName),
+                ),
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -507,8 +526,9 @@ class _FprintHomePageState extends State<FprintHomePage> {
     });
 
     if (result.manualCommand != null) {
+      final l10n = AppLocalizations.of(context)!;
       _showCommandDialog(
-        title: 'Reinicio manual requerido',
+        title: l10n.manualRestartTitle,
         message: result.message,
         command: result.manualCommand!,
       );
@@ -542,8 +562,9 @@ class _FprintHomePageState extends State<FprintHomePage> {
     if (!mounted) return;
 
     if (result.manualCommand != null) {
+      final l10n = AppLocalizations.of(context)!;
       _showCommandDialog(
-        title: 'Configurar PAM (Login y sudo)',
+        title: l10n.configurePamTitle,
         message: result.message,
         command: result.manualCommand!,
       );
@@ -563,6 +584,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
     required String message,
     required String command,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -594,7 +616,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cerrar'),
+            child: Text(l10n.closeBtn),
           ),
           FilledButton.icon(
             onPressed: () async {
@@ -604,14 +626,14 @@ class _FprintHomePageState extends State<FprintHomePage> {
               Navigator.of(ctx).pop();
               if (!mounted) return;
               messenger.showSnackBar(
-                const SnackBar(
-                  content: Text('Comando copiado al portapapeles.'),
+                SnackBar(
+                  content: Text(l10n.commandCopied),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
             },
             icon: const Icon(Icons.copy_rounded, size: 16),
-            label: const Text('Copiar comando'),
+            label: Text(l10n.copyCommandBtn),
           ),
         ],
       ),
@@ -621,6 +643,10 @@ class _FprintHomePageState extends State<FprintHomePage> {
   void _confirmDeleteFingerprint(FingerprintItem item) {
     final device = _activeDevice;
     if (device == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    final displayName = item.name == item.fingerName
+        ? l10n.fingerDisplayName(item.fingerCode)
+        : item.name;
 
     showDialog(
       context: context,
@@ -629,16 +655,16 @@ class _FprintHomePageState extends State<FprintHomePage> {
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.error(context)),
             const SizedBox(width: 10),
-            const Text('Eliminar huella', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            Text(l10n.deletePrintTitle, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
           ],
         ),
         content: Text(
-          '¿Deseas eliminar permanentemente "${item.name}" (${item.fingerCode}) de ${device.name}?',
+          l10n.deletePrintConfirm(displayName, item.fingerCode, device.name),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancelBtn),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error(context)),
@@ -651,14 +677,14 @@ class _FprintHomePageState extends State<FprintHomePage> {
                 SnackBar(
                   content: Text(
                     result.success
-                        ? 'Huella "${item.name}" eliminada correctamente.'
-                        : (result.error ?? 'No se pudo eliminar la huella.'),
+                        ? l10n.deletePrintSuccess(displayName)
+                        : (result.error ?? l10n.deletePrintFailed),
                   ),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
             },
-            child: const Text('Eliminar'),
+            child: Text(l10n.deleteBtn),
           ),
         ],
       ),
@@ -668,6 +694,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
   void _confirmDeleteAllFingerprints() {
     final device = _activeDevice;
     if (device == null) return;
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
@@ -676,16 +703,16 @@ class _FprintHomePageState extends State<FprintHomePage> {
           children: [
             Icon(Icons.delete_forever_rounded, color: AppColors.error(context)),
             const SizedBox(width: 10),
-            const Text('Borrar todas las huellas', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            Text(l10n.deleteAllTitle, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
           ],
         ),
         content: Text(
-          '¿Estás seguro de que deseas borrar TODAS las huellas registradas en ${device.name}? Esta acción no se puede deshacer.',
+          l10n.deleteAllConfirm(device.name),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancelBtn),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error(context)),
@@ -698,14 +725,14 @@ class _FprintHomePageState extends State<FprintHomePage> {
                 SnackBar(
                   content: Text(
                     result.success
-                        ? 'Todas las huellas han sido eliminadas.'
-                        : (result.error ?? 'No se pudieron eliminar las huellas.'),
+                        ? l10n.deleteAllSuccess
+                        : (result.error ?? l10n.deleteAllFailed),
                   ),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
             },
-            child: const Text('Borrar Todo'),
+            child: Text(l10n.deleteAllBtn),
           ),
         ],
       ),
@@ -778,9 +805,14 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   void _showInfoDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final deviceDesc = _activeDevice != null
-        ? '${_activeDevice!.name} (${_activeDevice!.scanType.displayLabel}, ${_activeDevice!.numEnrollStages} etapas)'
-        : 'Ningún lector activo';
+        ? l10n.aboutReaderDesc(
+            _activeDevice!.name,
+            l10n.scanTypeLabel(_activeDevice!.scanType),
+            _activeDevice!.numEnrollStages,
+          )
+        : l10n.aboutNoActiveReader;
 
     showDialog(
       context: context,
@@ -796,7 +828,12 @@ class _FprintHomePageState extends State<FprintHomePage> {
                   Icon(Icons.info_outline_rounded, color: AppColors.primary(context)),
             ),
             const SizedBox(width: 10),
-            const Text('Acerca de Fprint-Manager', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            Expanded(
+              child: Text(
+                l10n.aboutTitle,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+            ),
           ],
         ),
         content: SizedBox(
@@ -806,31 +843,33 @@ class _FprintHomePageState extends State<FprintHomePage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Gestor biométrico de huellas dactilares para escritorio Linux y elementary OS, conectado mediante D-Bus a fprintd y libfprint.',
-                  style: TextStyle(fontSize: 13.5, height: 1.4),
+                Text(
+                  l10n.aboutDescription,
+                  style: const TextStyle(fontSize: 13.5, height: 1.4),
                 ),
                 const SizedBox(height: 14),
-                _InfoBullet(label: 'Lector activo', value: deviceDesc),
+                _InfoBullet(label: l10n.aboutActiveReader, value: deviceDesc),
                 _InfoBullet(
-                  label: 'Entorno de ejecución',
-                  value: _isRunningInFlatpak ? 'Flatpak Sandbox' : 'Nativo Linux',
+                  label: l10n.aboutRuntimeEnv,
+                  value: _isRunningInFlatpak ? l10n.aboutFlatpak : l10n.aboutNativeLinux,
                 ),
                 _InfoBullet(
-                  label: 'Usuario del sistema',
+                  label: l10n.aboutSystemUser,
                   value: widget.backend.username,
                 ),
                 _InfoBullet(
-                  label: 'Configuración de apodos',
+                  label: l10n.aboutAliasConfig,
                   value: AliasService.configDirectoryPath,
                 ),
                 _InfoBullet(
-                  label: 'Autenticación PAM',
-                  value: _isPamEnabled ? 'Activa (Login, bloqueo y sudo)' : 'Desactivada',
+                  label: l10n.aboutPamAuth,
+                  value: _isPamEnabled ? l10n.aboutPamActive : l10n.aboutPamDisabled,
                 ),
                 _InfoBullet(
-                  label: 'Permisos Polkit',
-                  value: _isPolkitConfigured ? 'Permanentes' : 'Predeterminados',
+                  label: l10n.aboutPolkit,
+                  value: _isPolkitConfigured
+                      ? l10n.aboutPolkitPermanent
+                      : l10n.aboutPolkitDefault,
                 ),
               ],
             ),
@@ -839,7 +878,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Entendido'),
+            child: Text(l10n.understoodBtn),
           ),
         ],
       ),
@@ -928,15 +967,17 @@ class _FprintHomePageState extends State<FprintHomePage> {
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                         child: SegmentedButton<int>(
                           segments: [
-                            const ButtonSegment(
+                            ButtonSegment(
                               value: 0,
-                              icon: Icon(Icons.fingerprint_rounded, size: 17),
-                              label: Text('Verificar'),
+                              icon: const Icon(Icons.fingerprint_rounded, size: 17),
+                              label: Text(AppLocalizations.of(context)!.tabVerify),
                             ),
                             ButtonSegment(
                               value: 1,
                               icon: const Icon(Icons.list_alt_rounded, size: 17),
-                              label: Text('Huellas (${_fingerprints.length})'),
+                              label: Text(
+                                '${AppLocalizations.of(context)!.tabPrints} (${_fingerprints.length})',
+                              ),
                             ),
                           ],
                           selected: {_narrowSectionIndex},
@@ -999,6 +1040,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   Widget _buildHeaderBar(BuildContext context, bool isDark) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).appBarTheme.backgroundColor,
@@ -1048,8 +1090,8 @@ class _FprintHomePageState extends State<FprintHomePage> {
               const SizedBox(width: 8),
               IconButton(
                 tooltip: _licenseState.isSupporter
-                    ? 'Supporter activo • Apoyar proyecto'
-                    : 'Apoyar proyecto / Quitar anuncios',
+                    ? l10n.tooltipSupportActive
+                    : l10n.tooltipSupport,
                 icon: Icon(
                   _licenseState.isSupporter
                       ? Icons.favorite_rounded
@@ -1062,12 +1104,12 @@ class _FprintHomePageState extends State<FprintHomePage> {
                 onPressed: _showSupportDialog,
               ),
               IconButton(
-                tooltip: 'Recargar lectores y huellas (Ctrl+R)',
+                tooltip: l10n.tooltipReload,
                 icon: const Icon(Icons.refresh_rounded, size: 19),
                 onPressed: _isRestartingUsb ? null : _refreshAll,
               ),
               IconButton(
-                tooltip: 'Historial de verificaciones (${_verificationLogs.length})',
+                tooltip: l10n.tooltipHistory(_verificationLogs.length),
                 icon: Badge(
                   isLabelVisible: _verificationLogs.isNotEmpty,
                   label: Text('${_verificationLogs.length}'),
@@ -1077,12 +1119,12 @@ class _FprintHomePageState extends State<FprintHomePage> {
                 onPressed: _showHistoryDialog,
               ),
               IconButton(
-                tooltip: 'Diagnóstico y mantenimiento del sistema',
+                tooltip: l10n.tooltipMaintenance,
                 icon: const Icon(Icons.build_circle_outlined, size: 19),
                 onPressed: _showMaintenanceDialog,
               ),
               IconButton(
-                tooltip: isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro',
+                tooltip: isDark ? l10n.tooltipLightTheme : l10n.tooltipDarkTheme,
                 icon: Icon(
                   isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
                   size: 19,
@@ -1090,7 +1132,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
                 onPressed: widget.onToggleTheme,
               ),
               IconButton(
-                tooltip: 'Información del sistema',
+                tooltip: l10n.tooltipInfo,
                 icon: const Icon(Icons.info_outline_rounded, size: 19),
                 onPressed: _showInfoDialog,
               ),
@@ -1102,18 +1144,19 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   Widget _buildDeviceHeaderChip(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_hardwareStatus == HardwareStatus.loading) {
       return _HeaderPill(
         color: AppColors.primary(context),
-        label: 'Detectando hardware...',
+        label: l10n.detectingHardware,
       );
     }
     if (_hardwareStatus != HardwareStatus.ready || _activeDevice == null) {
       final label = switch (_hardwareStatus) {
-        HardwareStatus.serviceUnavailable => 'fprintd no disponible',
-        HardwareStatus.noDeviceFound => 'Sin lector conectado',
-        HardwareStatus.permissionDenied => 'Permiso denegado',
-        _ => 'Error de lector',
+        HardwareStatus.serviceUnavailable => l10n.fprintdUnavailable,
+        HardwareStatus.noDeviceFound => l10n.noReaderConnected,
+        HardwareStatus.permissionDenied => l10n.permissionDenied,
+        _ => l10n.readerError,
       };
       return _HeaderPill(
         color: AppColors.warning(context),
@@ -1129,7 +1172,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
     }
 
     return PopupMenuButton<FprintDeviceInfo>(
-      tooltip: 'Cambiar lector biométrico activo',
+      tooltip: l10n.tooltipSwitchDevice,
       onSelected: _selectDevice,
       itemBuilder: (ctx) => _devices
           .map(
@@ -1160,6 +1203,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   Widget _buildStatusStrip(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final deviceReady =
         _hardwareStatus == HardwareStatus.ready && _activeDevice != null;
     final statusDotColor = deviceReady
@@ -1169,10 +1213,14 @@ class _FprintHomePageState extends State<FprintHomePage> {
             : AppColors.warning(context));
 
     final summaryText = deviceReady
-        ? '${_activeDevice!.name} • ${_activeDevice!.scanType.displayLabel} • ${_activeDevice!.numEnrollStages} etapas'
+        ? l10n.statusSummary(
+            _activeDevice!.name,
+            l10n.scanTypeLabel(_activeDevice!.scanType),
+            _activeDevice!.numEnrollStages,
+          )
         : (_hardwareStatus == HardwareStatus.loading
-            ? 'Consultando D-Bus net.reactivated.Fprint...'
-            : (_hardwareError ?? 'Lector no disponible'));
+            ? l10n.queryingDBus
+            : (_hardwareError ?? l10n.readerUnavailable));
 
     return Container(
       width: double.infinity,
@@ -1210,7 +1258,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
             borderRadius: BorderRadius.circular(6),
             onTap: _togglePamFromStatusStrip,
             child: Tooltip(
-              message: 'Habilitar o deshabilitar huella en login y sudo (PAM)',
+              message: l10n.tooltipPamToggle,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -1238,7 +1286,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      _isPamEnabled ? 'Login & Sudo: Activo' : 'Login & Sudo: Off',
+                      _isPamEnabled ? l10n.pamActiveShort : l10n.pamOffShort,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -1258,6 +1306,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   Widget _buildLoadingView(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1267,13 +1316,13 @@ class _FprintHomePageState extends State<FprintHomePage> {
             size: 136,
           ),
           const SizedBox(height: 18),
-          const Text(
-            'Buscando lectores biométricos en el sistema...',
-            style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+          Text(
+            l10n.searchingReaders,
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           Text(
-            'Conectando por D-Bus a net.reactivated.Fprint',
+            l10n.connectingDBus,
             style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary(context)),
           ),
         ],
@@ -1282,24 +1331,22 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   Widget _buildDegradedHardwareView(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isServiceDown = _hardwareStatus == HardwareStatus.serviceUnavailable;
     final isPermDenied = _hardwareStatus == HardwareStatus.permissionDenied;
 
     final title = switch (_hardwareStatus) {
-      HardwareStatus.serviceUnavailable => 'Servicio fprintd no disponible',
-      HardwareStatus.noDeviceFound => 'No se detectó ningún lector de huellas',
-      HardwareStatus.permissionDenied => 'Permisos insuficientes en D-Bus',
-      _ => 'No se pudo inicializar el lector biométrico',
+      HardwareStatus.serviceUnavailable => l10n.serviceUnavailableTitle,
+      HardwareStatus.noDeviceFound => l10n.noDeviceFoundTitle,
+      HardwareStatus.permissionDenied => l10n.permissionDeniedTitle,
+      _ => l10n.initReaderErrorTitle,
     };
 
     final description = switch (_hardwareStatus) {
-      HardwareStatus.serviceUnavailable =>
-        'No fue posible comunicarse con net.reactivated.Fprint. Verifica que el paquete fprintd esté instalado y activo en tu distribución Linux.',
-      HardwareStatus.noDeviceFound =>
-        'El servicio fprintd está activo, pero libfprint no detectó sensores compatibles conectados. Si tienes un lector USB y quedó bloqueado tras suspender, prueba reiniciar el sensor.',
-      HardwareStatus.permissionDenied =>
-        'Polkit rechazó el acceso al dispositivo. Configura los permisos permanentes en el panel de Diagnóstico y Mantenimiento.',
-      _ => _hardwareError ?? 'Ocurrió un problema al consultar el hardware.',
+      HardwareStatus.serviceUnavailable => l10n.serviceUnavailableDesc,
+      HardwareStatus.noDeviceFound => l10n.noDeviceFoundDesc,
+      HardwareStatus.permissionDenied => l10n.permissionDeniedDesc,
+      _ => _hardwareError ?? l10n.hardwareQueryErrorDesc,
     };
 
     return Center(
@@ -1344,7 +1391,9 @@ class _FprintHomePageState extends State<FprintHomePage> {
                         border: Border.all(color: AppColors.border(context)),
                       ),
                       child: Text(
-                        'Dispositivos USB detectados: ${_usbDevices.map((d) => "${d.productName} [${d.usbId}]").join(", ")}',
+                        l10n.detectedUsbDevices(
+                          _usbDevices.map((d) => '${d.productName} [${d.usbId}]').join(', '),
+                        ),
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                       ),
@@ -1360,12 +1409,9 @@ class _FprintHomePageState extends State<FprintHomePage> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: AppColors.border(context)),
                       ),
-                      child: const SelectableText(
-                        'Instalación recomendada:\n'
-                        '• elementary OS / Ubuntu / Debian: sudo apt install fprintd libpam-fprintd\n'
-                        '• Fedora: sudo dnf install fprintd fprintd-pam\n'
-                        '• Arch Linux: sudo pacman -S fprintd',
-                        style: TextStyle(fontFamily: 'monospace', fontSize: 11.5),
+                      child: SelectableText(
+                        l10n.recommendedInstall,
+                        style: const TextStyle(fontFamily: 'monospace', fontSize: 11.5),
                       ),
                     ),
                   ],
@@ -1378,19 +1424,19 @@ class _FprintHomePageState extends State<FprintHomePage> {
                       FilledButton.icon(
                         onPressed: _refreshAll,
                         icon: const Icon(Icons.refresh_rounded, size: 17),
-                        label: const Text('Reintentar detección'),
+                        label: Text(l10n.retryDetection),
                       ),
                       if (!isServiceDown)
                         OutlinedButton.icon(
                           onPressed: _isRestartingUsb ? null : _restartUsbReader,
                           icon: const Icon(Icons.restart_alt_rounded, size: 17),
-                          label: const Text('Reiniciar lector y fprintd'),
+                          label: Text(l10n.restartReaderAndFprintd),
                         ),
                       if (isPermDenied || isServiceDown)
                         OutlinedButton.icon(
                           onPressed: _showMaintenanceDialog,
                           icon: const Icon(Icons.build_circle_outlined, size: 17),
-                          label: const Text('Abrir diagnóstico'),
+                          label: Text(l10n.openDiagnostics),
                         ),
                     ],
                   ),
@@ -1404,6 +1450,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   Widget _buildFingerprintsListPanel(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       color: AppColors.sidebar(context),
       child: Column(
@@ -1416,10 +1463,10 @@ class _FprintHomePageState extends State<FprintHomePage> {
                 Expanded(
                   child: Row(
                     children: [
-                      const Flexible(
+                      Flexible(
                         child: Text(
-                          'Huellas Registradas',
-                          style: TextStyle(
+                          l10n.enrolledFingerprints,
+                          style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 15,
                           ),
@@ -1447,7 +1494,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
                 ),
                 if (_fingerprints.isNotEmpty)
                   IconButton(
-                    tooltip: 'Borrar todas las huellas de este lector',
+                    tooltip: l10n.deleteAllTooltip,
                     style: IconButton.styleFrom(
                       foregroundColor: AppColors.error(context),
                       visualDensity: VisualDensity.compact,
@@ -1464,7 +1511,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
                   ),
                   onPressed: _showAddFingerprintDialog,
                   icon: const Icon(Icons.add_rounded, size: 16),
-                  label: const Text('Agregar', style: TextStyle(fontSize: 12.5)),
+                  label: Text(l10n.addButton, style: const TextStyle(fontSize: 12.5)),
                 ),
               ],
             ),
@@ -1483,13 +1530,13 @@ class _FprintHomePageState extends State<FprintHomePage> {
                             color: Theme.of(context).disabledColor,
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Sin huellas inscritas',
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                          Text(
+                            l10n.noEnrolledPrints,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Pulsa «Agregar» para registrar un dedo en ${_activeDevice?.name ?? "tu lector"}.',
+                            l10n.noEnrolledPrintsHint,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: AppColors.textSecondary(context),
@@ -1530,6 +1577,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   Widget _buildSensorInteractivePanel(BuildContext context, bool reduceMotion) {
+    final l10n = AppLocalizations.of(context)!;
     final isScanning = _sensorState == SensorState.scanning;
 
     final Color badgeColor;
@@ -1540,36 +1588,34 @@ class _FprintHomePageState extends State<FprintHomePage> {
       case SensorState.scanning:
         badgeColor = AppColors.primary(context);
         stateIcon = _fingerPresent ? Icons.fingerprint_rounded : Icons.sensors_rounded;
-        badgeTitle = _fingerPresent
-            ? 'LEYENDO HUELLA...'
-            : 'ESPERANDO LECTURA EN EL SENSOR';
+        badgeTitle = _fingerPresent ? l10n.badgeReading : l10n.badgeWaiting;
         break;
       case SensorState.success:
         badgeColor = AppColors.success(context);
         stateIcon = Icons.check_circle_rounded;
         badgeTitle = _lastMatchedFingerName != null
-            ? 'VERIFICACIÓN EXITOSA • ${_lastMatchedFingerName!.toUpperCase()}'
-            : 'VERIFICACIÓN EXITOSA';
+            ? l10n.badgeSuccessWithFinger(_lastMatchedFingerName!.toUpperCase())
+            : l10n.badgeSuccess;
         break;
       case SensorState.error:
         badgeColor = AppColors.error(context);
         stateIcon = Icons.error_rounded;
-        badgeTitle = 'SIN COINCIDENCIA / ERROR';
+        badgeTitle = l10n.badgeError;
         break;
       case SensorState.restarting:
         badgeColor = AppColors.primary(context);
         stateIcon = Icons.sync_rounded;
-        badgeTitle = 'REINICIANDO LECTOR';
+        badgeTitle = l10n.badgeRestarting;
         break;
       case SensorState.unavailable:
         badgeColor = AppColors.textSecondary(context);
         stateIcon = Icons.portable_wifi_off_outlined;
-        badgeTitle = 'SENSOR NO DISPONIBLE';
+        badgeTitle = l10n.badgeUnavailable;
         break;
       case SensorState.idle:
         badgeColor = AppColors.textSecondary(context);
         stateIcon = Icons.touch_app_rounded;
-        badgeTitle = 'LISTO PARA VERIFICAR (ESPACIO / CLIC)';
+        badgeTitle = l10n.badgeIdle;
         break;
     }
 
@@ -1645,9 +1691,9 @@ class _FprintHomePageState extends State<FprintHomePage> {
                                 Icon(Icons.auto_awesome_rounded,
                                     size: 16, color: AppColors.primary(context)),
                                 const SizedBox(width: 8),
-                                const Expanded(
+                                Expanded(
                                   child: Text(
-                                    'Cualquier huella (automático)',
+                                    l10n.fingerAny,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -1662,6 +1708,9 @@ class _FprintHomePageState extends State<FprintHomePage> {
                             ),
                           ),
                           ..._fingerprints.map((item) {
+                            final itemDisplayName = item.name == item.fingerName
+                                ? l10n.fingerDisplayName(item.fingerCode)
+                                : item.name;
                             return DropdownMenuItem(
                               value: item.fingerCode,
                               child: Row(
@@ -1670,7 +1719,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
                                       size: 16, color: AppColors.primary(context)),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                    child: Text(item.name, overflow: TextOverflow.ellipsis),
+                                    child: Text(itemDisplayName, overflow: TextOverflow.ellipsis),
                                   ),
                                   Text(
                                     '(-f ${item.fingerCode})',
@@ -1691,8 +1740,10 @@ class _FprintHomePageState extends State<FprintHomePage> {
                                   setState(() {
                                     _selectedVerifyFingerCode = val;
                                     _sensorStatusText = val == kAnyFingerCode
-                                        ? 'Modo automático activo: verificará contra todas tus huellas.'
-                                        : 'Objetivo: ${_resolveFingerDisplayName(val)}. Pulsa para verificar.';
+                                        ? l10n.promptAutoSelected
+                                        : l10n.promptTargetSelected(
+                                            _resolveFingerDisplayName(val),
+                                          );
                                   });
                                 }
                               },
@@ -1743,17 +1794,17 @@ class _FprintHomePageState extends State<FprintHomePage> {
                       ),
                       label: Text(
                         isScanning
-                            ? 'Cancelar verificación (Esc)'
+                            ? l10n.cancelVerificationBtn
                             : (_selectedVerifyFingerCode == kAnyFingerCode
-                                ? 'Verificar huella'
-                                : 'Verificar $targetLabel'),
+                                ? l10n.verifyAnyBtn
+                                : l10n.verifyTargetBtn(targetLabel)),
                       ),
                     ),
                     if (_fingerprints.isEmpty)
                       OutlinedButton.icon(
                         onPressed: _showAddFingerprintDialog,
                         icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Registrar primera huella'),
+                        label: Text(l10n.registerFirstPrintBtn),
                       ),
                   ],
                 ),
@@ -1766,6 +1817,7 @@ class _FprintHomePageState extends State<FprintHomePage> {
   }
 
   Widget _buildBottomActionBar(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final serviceOk = _hardwareStatus == HardwareStatus.ready ||
         _hardwareStatus == HardwareStatus.noDeviceFound;
 
@@ -1795,8 +1847,11 @@ class _FprintHomePageState extends State<FprintHomePage> {
             Expanded(
               child: Text(
                 _isRestartingUsb
-                    ? 'Reiniciando servicio y hardware...'
-                    : 'fprintd: ${serviceOk ? "Activo" : "Inactivo"} • Polkit: ${_isPolkitConfigured ? "Sin contraseñas" : "Predeterminado"}',
+                    ? l10n.bottomBarRestarting
+                    : l10n.bottomBarStatus(
+                        serviceOk ? l10n.statusActive : l10n.statusInactive,
+                        _isPolkitConfigured ? l10n.polkitPasswordless : l10n.polkitDefault,
+                      ),
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w500,
@@ -1817,10 +1872,10 @@ class _FprintHomePageState extends State<FprintHomePage> {
                   : const Icon(Icons.restart_alt_rounded, size: 17),
               label: Text(
                 _isRestartingUsb
-                    ? 'Reiniciando...'
+                    ? l10n.restartingBtn
                     : (_isRunningInFlatpak
-                        ? 'Reinicio de hardware...'
-                        : 'Reiniciar lector y servicio'),
+                        ? l10n.hardwareRestartBtn
+                        : l10n.restartReaderServiceBtn),
                 style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
               ),
             ),
@@ -1900,8 +1955,12 @@ class _FingerprintCardState extends State<_FingerprintCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final isCustomized = widget.item.name != widget.item.fingerName;
+    final localizedFingerName = l10n.fingerDisplayName(widget.item.fingerCode);
+    final isCustomized = widget.item.name != widget.item.fingerName &&
+        widget.item.name != localizedFingerName;
+    final displayTitle = isCustomized ? widget.item.name : localizedFingerName;
     final primary = AppColors.primary(context);
 
     final borderColor = widget.isSelected || _focused
@@ -1969,7 +2028,7 @@ class _FingerprintCardState extends State<_FingerprintCard> {
                         children: [
                           Expanded(
                             child: Text(
-                              widget.item.name,
+                              displayTitle,
                               style: TextStyle(
                                 fontWeight:
                                     widget.isSelected ? FontWeight.w700 : FontWeight.w600,
@@ -1991,7 +2050,7 @@ class _FingerprintCardState extends State<_FingerprintCard> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'Objetivo',
+                                l10n.targetBadge,
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
@@ -2009,7 +2068,7 @@ class _FingerprintCardState extends State<_FingerprintCard> {
                         children: [
                           if (isCustomized)
                             Text(
-                              widget.item.fingerName,
+                              localizedFingerName,
                               style: TextStyle(
                                 fontSize: 11,
                                 color: AppColors.textSecondary(context),
@@ -2039,7 +2098,7 @@ class _FingerprintCardState extends State<_FingerprintCard> {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Editar nombre personalizado',
+                  tooltip: l10n.editCustomNameTooltip,
                   style: IconButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     foregroundColor: primary,
@@ -2048,7 +2107,7 @@ class _FingerprintCardState extends State<_FingerprintCard> {
                   onPressed: widget.onEdit,
                 ),
                 IconButton(
-                  tooltip: 'Eliminar huella',
+                  tooltip: l10n.deletePrintTooltip,
                   style: IconButton.styleFrom(
                     visualDensity: VisualDensity.compact,
                     foregroundColor: AppColors.error(context),

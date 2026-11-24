@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/verification_log.dart';
 import '../theme/app_theme.dart';
 
@@ -22,6 +23,7 @@ class VerificationHistoryDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return AlertDialog(
@@ -29,10 +31,10 @@ class VerificationHistoryDialog extends StatelessWidget {
         children: [
           Icon(Icons.history_rounded, color: AppColors.primary(context), size: 22),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Historial de Verificaciones',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              l10n.historyTitle,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
           ),
           if (logs.isNotEmpty)
@@ -43,7 +45,7 @@ class VerificationHistoryDialog extends StatelessWidget {
               ),
               onPressed: onClearLogs,
               icon: const Icon(Icons.delete_sweep_outlined, size: 16),
-              label: const Text('Limpiar', style: TextStyle(fontSize: 12)),
+              label: Text(l10n.clearHistoryBtn, style: const TextStyle(fontSize: 12)),
             ),
         ],
       ),
@@ -57,13 +59,13 @@ class VerificationHistoryDialog extends StatelessWidget {
                   children: [
                     Icon(Icons.rule_folder_outlined, size: 44, color: theme.disabledColor),
                     const SizedBox(height: 10),
-                    const Text(
-                      'Sin actividad registrada',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    Text(
+                      l10n.historyEmptyTitle,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Cada vez que pruebes el sensor biométrico, los resultados quedarán registrados aquí.',
+                      l10n.historyEmptyDesc,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textSecondary(context),

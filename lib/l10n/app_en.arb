@@ -1,0 +1,393 @@
+{
+  "@@locale": "en",
+  "appTitle": "Fprint-Manager",
+  "fingerAny": "Any finger (automatic)",
+  "fingerRightIndex": "Right Index",
+  "fingerRightThumb": "Right Thumb",
+  "fingerRightMiddle": "Right Middle",
+  "fingerRightRing": "Right Ring",
+  "fingerRightLittle": "Right Little",
+  "fingerLeftIndex": "Left Index",
+  "fingerLeftThumb": "Left Thumb",
+  "fingerLeftMiddle": "Left Middle",
+  "fingerLeftRing": "Left Ring",
+  "fingerLeftLittle": "Left Little",
+  "scanTypePress": "Touch",
+  "scanTypeSwipe": "Swipe",
+  "tooltipSupportActive": "Supporter active • Support project",
+  "tooltipSupport": "Support project / Remove ads",
+  "tooltipReload": "Reload readers and fingerprints (Ctrl+R)",
+  "tooltipHistory": "Verification history ({count})",
+  "@tooltipHistory": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "tooltipMaintenance": "System diagnostics and maintenance",
+  "tooltipLightTheme": "Switch to light theme",
+  "tooltipDarkTheme": "Switch to dark theme",
+  "tooltipInfo": "System information",
+  "tooltipSwitchDevice": "Switch active biometric reader",
+  "detectingHardware": "Detecting hardware...",
+  "fprintdUnavailable": "fprintd unavailable",
+  "noReaderConnected": "No reader connected",
+  "permissionDenied": "Permission denied",
+  "readerError": "Reader error",
+  "statusSummary": "{name} • {scanType} • {stages} stages",
+  "@statusSummary": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "scanType": {"type": "String"},
+      "stages": {"type": "int"}
+    }
+  },
+  "queryingDBus": "Querying D-Bus net.reactivated.Fprint...",
+  "readerUnavailable": "Reader unavailable",
+  "tooltipPamToggle": "Enable or disable fingerprint for login and sudo (PAM)",
+  "pamActiveShort": "Login & Sudo: Active",
+  "pamOffShort": "Login & Sudo: Off",
+  "searchingReaders": "Searching for biometric readers on the system...",
+  "connectingDBus": "Connecting via D-Bus to net.reactivated.Fprint",
+  "serviceUnavailableTitle": "fprintd service unavailable",
+  "noDeviceFoundTitle": "No fingerprint reader detected",
+  "permissionDeniedTitle": "Insufficient D-Bus permissions",
+  "initReaderErrorTitle": "Could not initialize biometric reader",
+  "serviceUnavailableDesc": "Could not communicate with net.reactivated.Fprint. Verify that the fprintd package is installed and active on your Linux distribution.",
+  "noDeviceFoundDesc": "The fprintd service is active, but libfprint did not detect any compatible connected sensors. If you have a USB reader that got stuck after suspend, try resetting the sensor.",
+  "permissionDeniedDesc": "Polkit denied access to the device. Configure permanent permissions in the Diagnostics & Maintenance panel.",
+  "hardwareQueryErrorDesc": "A problem occurred while querying the hardware.",
+  "detectedUsbDevices": "Detected USB devices: {devices}",
+  "@detectedUsbDevices": {
+    "placeholders": {
+      "devices": {"type": "String"}
+    }
+  },
+  "recommendedInstall": "Recommended installation:\n• elementary OS / Ubuntu / Debian: sudo apt install fprintd libpam-fprintd\n• Fedora: sudo dnf install fprintd fprintd-pam\n• Arch Linux: sudo pacman -S fprintd",
+  "retryDetection": "Retry detection",
+  "restartReaderAndFprintd": "Restart reader and fprintd",
+  "openDiagnostics": "Open diagnostics",
+  "tabVerify": "Verify",
+  "tabPrints": "Fingerprints",
+  "enrolledFingerprints": "Enrolled Fingerprints",
+  "deleteAllTooltip": "Delete all fingerprints from this reader",
+  "addButton": "Add",
+  "noEnrolledPrints": "No enrolled fingerprints",
+  "noEnrolledPrintsHint": "Press \"Add\" to enroll your first fingerprint.",
+  "targetBadge": "Target",
+  "editCustomNameTooltip": "Edit custom name",
+  "deletePrintTooltip": "Delete fingerprint",
+  "badgeReading": "READING FINGERPRINT...",
+  "badgeWaiting": "WAITING FOR SENSOR INPUT",
+  "badgeSuccess": "VERIFICATION SUCCESSFUL",
+  "badgeSuccessWithFinger": "VERIFICATION SUCCESSFUL • {finger}",
+  "@badgeSuccessWithFinger": {
+    "placeholders": {
+      "finger": {"type": "String"}
+    }
+  },
+  "badgeError": "NO MATCH / ERROR",
+  "badgeRestarting": "RESTARTING READER",
+  "badgeUnavailable": "SENSOR UNAVAILABLE",
+  "badgeIdle": "READY TO VERIFY (SPACE / CLICK)",
+  "promptIdleAuto": "Press \"Verify fingerprint\" or Space to test any enrolled finger.",
+  "promptIdleNoPrints": "No fingerprints enrolled yet. Press \"Register first fingerprint\".",
+  "promptAutoSelected": "Automatic mode active: will verify against all your fingerprints.",
+  "promptTargetSelected": "Target: {finger}. Press to verify.",
+  "@promptTargetSelected": {
+    "placeholders": {
+      "finger": {"type": "String"}
+    }
+  },
+  "promptScanningAuto": "Sensor active (automatic detection). Place any of your fingerprints...",
+  "promptScanningTarget": "Sensor active (-f {code}). Place \"{finger}\" on the reader...",
+  "@promptScanningTarget": {
+    "placeholders": {
+      "code": {"type": "String"},
+      "finger": {"type": "String"}
+    }
+  },
+  "verifyCancelledPrompt": "Verification cancelled. Press to start.",
+  "verifyMatchDetected": "Fingerprint verified successfully!\nDetected finger: {finger}",
+  "@verifyMatchDetected": {
+    "placeholders": {
+      "finger": {"type": "String"}
+    }
+  },
+  "verifyMatchAutoUnknown": "Fingerprint verified successfully!\nMatched one of your {count} enrolled fingerprints (fprintd does not report the specific finger in automatic mode).",
+  "@verifyMatchAutoUnknown": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "verifyNoMatchAny": "Fingerprint did not match any enrolled print. Try again.",
+  "verifyNoMatchTarget": "Fingerprint did not match \"{finger}\". Try again.",
+  "@verifyNoMatchTarget": {
+    "placeholders": {
+      "finger": {"type": "String"}
+    }
+  },
+  "verifyErrorPrefix": "Verification error: {error}",
+  "@verifyErrorPrefix": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "cancelVerificationBtn": "Cancel verification (Esc)",
+  "verifyAnyBtn": "Verify fingerprint",
+  "verifyTargetBtn": "Verify {finger}",
+  "@verifyTargetBtn": {
+    "placeholders": {
+      "finger": {"type": "String"}
+    }
+  },
+  "registerFirstPrintBtn": "Register first fingerprint",
+  "noPrintsToVerify": "No fingerprints enrolled to verify.",
+  "bottomBarRestarting": "Restarting service and hardware...",
+  "bottomBarStatus": "fprintd: {service} • Polkit: {polkit}",
+  "@bottomBarStatus": {
+    "placeholders": {
+      "service": {"type": "String"},
+      "polkit": {"type": "String"}
+    }
+  },
+  "statusActive": "Active",
+  "statusInactive": "Inactive",
+  "polkitPasswordless": "Passwordless",
+  "polkitDefault": "Default",
+  "restartingBtn": "Restarting...",
+  "hardwareRestartBtn": "Hardware restart...",
+  "restartReaderServiceBtn": "Restart reader & service",
+  "closeBtn": "Close",
+  "cancelBtn": "Cancel",
+  "saveBtn": "Save",
+  "deleteBtn": "Delete",
+  "deleteAllBtn": "Delete All",
+  "understoodBtn": "Got it",
+  "retryBtn": "Retry",
+  "copyCommandBtn": "Copy command",
+  "commandCopied": "Command copied to clipboard.",
+  "manualRestartTitle": "Manual restart required",
+  "configurePamTitle": "Configure PAM (Login & sudo)",
+  "deletePrintTitle": "Delete fingerprint",
+  "deletePrintConfirm": "Do you want to permanently delete \"{name}\" ({code}) from {device}?",
+  "@deletePrintConfirm": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "code": {"type": "String"},
+      "device": {"type": "String"}
+    }
+  },
+  "deletePrintSuccess": "Fingerprint \"{name}\" deleted successfully.",
+  "@deletePrintSuccess": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "deletePrintFailed": "Could not delete the fingerprint.",
+  "deleteAllTitle": "Delete all fingerprints",
+  "deleteAllConfirm": "Are you sure you want to delete ALL enrolled fingerprints on {device}? This action cannot be undone.",
+  "@deleteAllConfirm": {
+    "placeholders": {
+      "device": {"type": "String"}
+    }
+  },
+  "deleteAllSuccess": "All fingerprints have been deleted.",
+  "deleteAllFailed": "Could not delete fingerprints.",
+  "aliasUpdated": "Name for \"{finger}\" updated to \"{name}\".",
+  "@aliasUpdated": {
+    "placeholders": {
+      "finger": {"type": "String"},
+      "name": {"type": "String"}
+    }
+  },
+  "aboutTitle": "About Fprint-Manager",
+  "aboutDescription": "Biometric fingerprint manager for Linux desktop and elementary OS, connected via D-Bus to fprintd and libfprint.",
+  "aboutActiveReader": "Active reader",
+  "aboutNoActiveReader": "No active reader",
+  "aboutReaderDesc": "{name} ({scanType}, {stages} stages)",
+  "@aboutReaderDesc": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "scanType": {"type": "String"},
+      "stages": {"type": "int"}
+    }
+  },
+  "aboutRuntimeEnv": "Runtime environment",
+  "aboutFlatpak": "Flatpak Sandbox",
+  "aboutNativeLinux": "Native Linux",
+  "aboutSystemUser": "System user",
+  "aboutAliasConfig": "Aliases configuration",
+  "aboutPamAuth": "PAM authentication",
+  "aboutPamActive": "Active (Login, lock screen & sudo)",
+  "aboutPamDisabled": "Disabled",
+  "aboutPolkit": "Polkit permissions",
+  "aboutPolkitPermanent": "Permanent",
+  "aboutPolkitDefault": "Default",
+  "editNameTitle": "Customize Fingerprint Name",
+  "assignedFingerLabel": "Assigned finger:",
+  "customNameLabel": "Descriptive name or label:",
+  "customNameHint": "E.g. Primary finger for sudo",
+  "clearFieldTooltip": "Clear field",
+  "restoreOriginalBtn": "Restore original ({name})",
+  "@restoreOriginalBtn": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "historyTitle": "Verification History",
+  "clearHistoryBtn": "Clear",
+  "historyEmptyTitle": "No activity recorded",
+  "historyEmptyDesc": "Whenever you test the biometric sensor, the results will be recorded here.",
+  "enrollTitleActive": "Enrolling: {finger}",
+  "@enrollTitleActive": {
+    "placeholders": {
+      "finger": {"type": "String"}
+    }
+  },
+  "enrollTitleIdle": "Register New Fingerprint",
+  "enrollOverwriteBtn": "Overwrite fingerprint",
+  "enrollStartBtn": "Start enrollment",
+  "enrollSelectFinger": "Select the finger you want to enroll:",
+  "enrollAlreadyBadge": "Enrolled",
+  "enrollAlreadyNote": "Note: This finger already has a saved print; enrolling again will replace it in fprintd.",
+  "enrollSwipeHint": "Your reader is a swipe sensor: it will require {stages} smooth swipes across the sensor.",
+  "@enrollSwipeHint": {
+    "placeholders": {
+      "stages": {"type": "int"}
+    }
+  },
+  "enrollPressHint": "Your reader is a touch sensor: it will require placing and lifting your finger {stages} times until the ring reaches 100%.",
+  "@enrollPressHint": {
+    "placeholders": {
+      "stages": {"type": "int"}
+    }
+  },
+  "enrollSwipeStart": "Swipe your finger smoothly across the sensor to begin.",
+  "enrollPressStart": "Place your finger firmly on the sensor to begin.",
+  "enrollPreparing": "Preparing sensor {device}...",
+  "@enrollPreparing": {
+    "placeholders": {
+      "device": {"type": "String"}
+    }
+  },
+  "enrollErrorPrefix": "Error during enrollment: {error}",
+  "@enrollErrorPrefix": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "enrollCompletedBadge": "Enrollment completed • 100%!",
+  "enrollStageBadge": "Stage {current} of {total} • {percent}%",
+  "@enrollStageBadge": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"},
+      "percent": {"type": "int"}
+    }
+  },
+  "bannerIndieLabel": "Indie Project",
+  "bannerRemoveBtn": "Remove ({price})",
+  "@bannerRemoveBtn": {
+    "placeholders": {
+      "price": {"type": "String"}
+    }
+  },
+  "supportTitle": "Support Fprint-Manager",
+  "supportOpenBrowserError": "Could not open browser. Visit manually: {url}",
+  "@supportOpenBrowserError": {
+    "placeholders": {
+      "url": {"type": "String"}
+    }
+  },
+  "supportOpenCheckoutError": "Could not open checkout page: {url}",
+  "@supportOpenCheckoutError": {
+    "placeholders": {
+      "url": {"type": "String"}
+    }
+  },
+  "supportLicenseRemoved": "License removed from this device.",
+  "supportDonationTitle": "Voluntary donation (PayPal / Ko-fi)",
+  "supportDonationDesc": "Fprint-Manager is free software with no feature locks. If you find it useful, you can buy me a coffee or send a direct contribution.",
+  "supportDonateBtn": "Donate with PayPal / Ko-fi",
+  "supportLicenseActiveTitle": "Supporter License Active",
+  "supportLicenseKeyLabel": "Key: {key}",
+  "@supportLicenseKeyLabel": {
+    "placeholders": {
+      "key": {"type": "String"}
+    }
+  },
+  "supportLicenseHolderLabel": "Holder: {email}",
+  "@supportLicenseHolderLabel": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "supportDeactivateBtn": "Deactivate on this device",
+  "supportRemoveAdsTitle": "Remove ads ({price})",
+  "@supportRemoveAdsTitle": {
+    "placeholders": {
+      "price": {"type": "String"}
+    }
+  },
+  "supportRemoveAdsDesc": "One-time payment via card or PayPal. You will immediately receive a license key to hide the banner on your device.",
+  "supportGetKeyBtn": "Get license key ({price})",
+  "@supportGetKeyBtn": {
+    "placeholders": {
+      "price": {"type": "String"}
+    }
+  },
+  "supportKeyFieldLabel": "Supporter license key",
+  "supportKeyFieldHint": "Paste your key here",
+  "supportValidatingBtn": "Validating...",
+  "supportActivateBtn": "Activate license",
+  "maintTitle": "Diagnostics & Maintenance",
+  "maintRefreshTooltip": "Refresh diagnostics",
+  "maintEnvTitle": "Linux Environment Status",
+  "maintNativeSession": "Native Session",
+  "maintDbusRow": "System D-Bus (net.reactivated.Fprint)",
+  "maintConnected": "Connected",
+  "maintInactiveOrMissing": "Inactive or not installed",
+  "maintReadersRow": "Readers exposed by libfprint",
+  "maintNoneDetected": "None detected",
+  "maintUsbRow": "USB biometric sensors in sysfs",
+  "maintNoUsb": "No USB reader (or internal SPI/I2C reader)",
+  "maintPamRow": "PAM integration (login, lock & sudo)",
+  "maintEnabled": "Enabled",
+  "maintDisabled": "Disabled",
+  "maintPolkitRow": "Passwordless Polkit rule",
+  "maintInstalled": "Installed",
+  "maintMissingPackages": "Required system packages if fprintd is not installed:",
+  "maintPolkitActive": "Permanent Polkit permissions active",
+  "maintPolkitDefault": "Default Polkit permissions",
+  "maintPolkitDesc": "Allows users in the admin group to enroll or delete their own fingerprints without repeating their password for every action.",
+  "maintPolkitFlatpakBtn": "View host permission command",
+  "maintPolkitReapplyBtn": "Reapply Polkit rule",
+  "maintPolkitGrantBtn": "Grant permanent permissions",
+  "maintPamActive": "PAM authentication active (Login & sudo)",
+  "maintPamDisabled": "PAM authentication disabled",
+  "maintPamActiveDesc": "Enrolled fingerprints can be used to log in, unlock the screen, and authorize sudo.",
+  "maintPamDisabledDesc": "Enable the pam_fprintd module to use your fingerprint at login and with sudo.",
+  "maintPamDisableBtn": "Disable in Login & sudo",
+  "maintPamEnableBtn": "Enable in Login & sudo",
+  "maintUsbTitle": "Reader & fprintd Service Reset",
+  "maintUsbDetected": "Detected: {devices}.",
+  "@maintUsbDetected": {
+    "placeholders": {
+      "devices": {"type": "String"}
+    }
+  },
+  "maintUsbNone": "No USB sensors detected in sysfs (if internal SPI/I2C, only fprintd will be restarted).",
+  "maintUsbDesc": "Recovers readers stuck after suspend or USB dock reconnection. {summary}",
+  "@maintUsbDesc": {
+    "placeholders": {
+      "summary": {"type": "String"}
+    }
+  },
+  "maintUsbFlatpakBtn": "Generate host reset command",
+  "maintUsbResetBtn": "Restart reader and fprintd service",
+  "maintStatusPolkit": "Configuring Polkit rule for biometric permissions...",
+  "maintStatusPamEnable": "Enabling fingerprint authentication for login and sudo...",
+  "maintStatusPamDisable": "Disabling system fingerprint authentication...",
+  "maintStatusUsb": "Restarting detected USB readers and fprintd service..."
+}
+

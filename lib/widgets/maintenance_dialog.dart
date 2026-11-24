@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import '../models/fprint_device_info.dart';
 import '../services/fprint_service.dart';
 import '../services/usb_maintenance_service.dart';
@@ -45,11 +46,12 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
   }
 
   Future<void> _handlePolkitSetup() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isOperating = true;
       _manualCommand = null;
       _statusIsError = false;
-      _statusMessage = 'Configurando regla Polkit para permisos biométricos...';
+      _statusMessage = l10n.maintStatusPolkit;
     });
 
     final result = await UsbMaintenanceService.configurePermanentPermissions();
@@ -66,6 +68,7 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
   }
 
   Future<void> _handlePamToggle() async {
+    final l10n = AppLocalizations.of(context)!;
     final current = _diag?.isPamEnabled ?? false;
     final willEnable = !current;
     setState(() {
@@ -73,8 +76,8 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
       _manualCommand = null;
       _statusIsError = false;
       _statusMessage = willEnable
-          ? 'Habilitando autenticación por huella en login y sudo...'
-          : 'Deshabilitando autenticación por huella en el sistema...';
+          ? l10n.maintStatusPamEnable
+          : l10n.maintStatusPamDisable;
     });
 
     final result = await UsbMaintenanceService.setPamAuthenticationEnabled(willEnable);
@@ -91,11 +94,12 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
   }
 
   Future<void> _handleUsbReset() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isOperating = true;
       _manualCommand = null;
       _statusIsError = false;
-      _statusMessage = 'Reiniciando lectores USB detectados y servicio fprintd...';
+      _statusMessage = l10n.maintStatusUsb;
     });
 
     final result = await UsbMaintenanceService.resetUsbAndDaemon(_diag?.usbDevices);
@@ -112,19 +116,21 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
   }
 
   Future<void> _copyToClipboard(String text) async {
+    final l10n = AppLocalizations.of(context)!;
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Comando copiado al portapapeles.'),
+      SnackBar(
+        content: Text(l10n.commandCopied),
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final diag = _diag;
 
     return AlertDialog(
@@ -132,14 +138,14 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
         children: [
           Icon(Icons.build_circle_outlined, color: AppColors.primary(context)),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Diagnóstico y Mantenimiento',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              l10n.maintTitle,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
           ),
           IconButton(
-            tooltip: 'Actualizar diagnóstico',
+            tooltip: l10n.maintRefreshTooltip,
             onPressed: (_isLoading || _isOperating) ? null : _loadDiagnostics,
             icon: const Icon(Icons.refresh_rounded, size: 19),
           ),
@@ -157,16 +163,16 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDiagnosticsCard(context, diag),
+                    _buildDiagnosticsCard(context, l10n, diag),
                     const SizedBox(height: 12),
-                    _buildPolkitCard(context, diag),
+                    _buildPolkitCard(context, l10n, diag),
                     const SizedBox(height: 12),
-                    _buildPamCard(context, diag),
+                    _buildPamCard(context, l10n, diag),
                     const SizedBox(height: 12),
-                    _buildUsbResetCard(context, diag),
+                    _buildUsbResetCard(context, l10n, diag),
                     if (_statusMessage != null) ...[
                       const SizedBox(height: 14),
-                      _buildStatusFeedback(context),
+                      _buildStatusFeedback(context, l10n),
                     ],
                   ],
                 ),
@@ -175,13 +181,17 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
       actions: [
         TextButton(
           onPressed: _isOperating ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cerrar'),
+          child: Text(l10n.closeBtn),
         ),
       ],
     );
   }
 
-  Widget _buildDiagnosticsCard(BuildContext context, SystemDiagnostics diag) {
+  Widget _buildDiagnosticsCard(
+    BuildContext context,
+    AppLocalizations l10n,
+    SystemDiagnostics diag,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -193,9 +203,9 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
                 Icon(Icons.monitor_heart_outlined,
                     size: 19, color: AppColors.primary(context)),
                 const SizedBox(width: 8),
-                const Text(
-                  'Estado del Entorno Linux',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                Text(
+                  l10n.maintEnvTitle,
+                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
                 Container(
@@ -205,7 +215,7 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    diag.isRunningInFlatpak ? 'Sandbox Flatpak' : 'Sesión Nativa',
+                    diag.isRunningInFlatpak ? l10n.aboutFlatpak : l10n.maintNativeSession,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -217,37 +227,39 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
             ),
             const SizedBox(height: 10),
             _DiagRow(
-              label: 'Bus del sistema D-Bus (net.reactivated.Fprint)',
+              label: l10n.maintDbusRow,
               ok: diag.fprintdAvailable,
               detail: diag.fprintdAvailable
-                  ? 'Conectado'
-                  : 'Inactivo o no instalado',
+                  ? l10n.maintConnected
+                  : l10n.maintInactiveOrMissing,
             ),
             _DiagRow(
-              label: 'Lectores expuestos por libfprint',
+              label: l10n.maintReadersRow,
               ok: diag.devices.isNotEmpty,
               detail: diag.devices.isNotEmpty
                   ? '${diag.devices.length} (${diag.devices.map((d) => d.name).join(", ")})'
-                  : 'Ninguno detectado',
+                  : l10n.maintNoneDetected,
             ),
             _DiagRow(
-              label: 'Sensores biométricos USB en sysfs',
+              label: l10n.maintUsbRow,
               ok: diag.usbDevices.isNotEmpty,
               detail: diag.usbDevices.isNotEmpty
                   ? diag.usbDevices.map((d) => '${d.vendorName} [${d.usbId}]').join(', ')
-                  : 'Sin lector USB (o lector interno SPI/I2C)',
+                  : l10n.maintNoUsb,
               neutralWhenFalse: true,
             ),
             _DiagRow(
-              label: 'Integración PAM (login, bloqueo y sudo)',
+              label: l10n.maintPamRow,
               ok: diag.isPamEnabled,
-              detail: diag.isPamEnabled ? 'Habilitado' : 'Deshabilitado',
+              detail: diag.isPamEnabled ? l10n.maintEnabled : l10n.maintDisabled,
               neutralWhenFalse: true,
             ),
             _DiagRow(
-              label: 'Regla Polkit sin contraseñas repetidas',
+              label: l10n.maintPolkitRow,
               ok: diag.isPolkitRuleInstalled,
-              detail: diag.isPolkitRuleInstalled ? 'Instalada' : 'Por defecto',
+              detail: diag.isPolkitRuleInstalled
+                  ? l10n.maintInstalled
+                  : l10n.polkitDefault,
               neutralWhenFalse: true,
             ),
             if (!diag.fprintdAvailable) ...[
@@ -265,7 +277,7 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Paquetes del sistema necesarios si fprintd no está instalado:',
+                      l10n.maintMissingPackages,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -292,7 +304,11 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
     );
   }
 
-  Widget _buildPolkitCard(BuildContext context, SystemDiagnostics diag) {
+  Widget _buildPolkitCard(
+    BuildContext context,
+    AppLocalizations l10n,
+    SystemDiagnostics diag,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -314,8 +330,8 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
                 Expanded(
                   child: Text(
                     diag.isPolkitRuleInstalled
-                        ? 'Permisos permanentes Polkit activos'
-                        : 'Permisos Polkit predeterminados',
+                        ? l10n.maintPolkitActive
+                        : l10n.maintPolkitDefault,
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -323,7 +339,7 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Permite que usuarios del grupo administrativo registren o eliminen sus propias huellas sin repetir la contraseña en cada acción.',
+              l10n.maintPolkitDesc,
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 10),
@@ -332,10 +348,10 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
               icon: const Icon(Icons.security_rounded, size: 16),
               label: Text(
                 diag.isRunningInFlatpak
-                    ? 'Ver comando de permisos para anfitrión'
+                    ? l10n.maintPolkitFlatpakBtn
                     : (diag.isPolkitRuleInstalled
-                        ? 'Reaplicar regla Polkit'
-                        : 'Autorizar permisos permanentes'),
+                        ? l10n.maintPolkitReapplyBtn
+                        : l10n.maintPolkitGrantBtn),
               ),
             ),
           ],
@@ -344,7 +360,11 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
     );
   }
 
-  Widget _buildPamCard(BuildContext context, SystemDiagnostics diag) {
+  Widget _buildPamCard(
+    BuildContext context,
+    AppLocalizations l10n,
+    SystemDiagnostics diag,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -366,8 +386,8 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
                 Expanded(
                   child: Text(
                     diag.isPamEnabled
-                        ? 'Autenticación PAM activa (Login y sudo)'
-                        : 'Autenticación PAM desactivada',
+                        ? l10n.maintPamActive
+                        : l10n.maintPamDisabled,
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -376,8 +396,8 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
             const SizedBox(height: 6),
             Text(
               diag.isPamEnabled
-                  ? 'Las huellas registradas permiten iniciar sesión, desbloquear pantalla y autorizar sudo.'
-                  : 'Activa el módulo pam_fprintd para usar tu huella al iniciar sesión y en sudo.',
+                  ? l10n.maintPamActiveDesc
+                  : l10n.maintPamDisabledDesc,
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 10),
@@ -391,8 +411,8 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
               ),
               label: Text(
                 diag.isPamEnabled
-                    ? 'Deshabilitar en Login y sudo'
-                    : 'Habilitar en Login y sudo',
+                    ? l10n.maintPamDisableBtn
+                    : l10n.maintPamEnableBtn,
               ),
             ),
           ],
@@ -401,10 +421,16 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
     );
   }
 
-  Widget _buildUsbResetCard(BuildContext context, SystemDiagnostics diag) {
+  Widget _buildUsbResetCard(
+    BuildContext context,
+    AppLocalizations l10n,
+    SystemDiagnostics diag,
+  ) {
     final usbSummary = diag.usbDevices.isNotEmpty
-        ? 'Detectado: ${diag.usbDevices.map((d) => "${d.productName} (${d.usbId})").join(", ")}.'
-        : 'No se detectaron sensores USB en sysfs (si es interno SPI/I2C, solo se reiniciará fprintd).';
+        ? l10n.maintUsbDetected(
+            diag.usbDevices.map((d) => '${d.productName} (${d.usbId})').join(', '),
+          )
+        : l10n.maintUsbNone;
 
     return Card(
       child: Padding(
@@ -416,15 +442,15 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
               children: [
                 Icon(Icons.usb_rounded, color: AppColors.primary(context), size: 19),
                 const SizedBox(width: 8),
-                const Text(
-                  'Reinicio de Lector y Servicio fprintd',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                Text(
+                  l10n.maintUsbTitle,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              'Recupera lectores bloqueados tras suspensión o reconexión de docks USB. $usbSummary',
+              l10n.maintUsbDesc(usbSummary),
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 10),
@@ -433,8 +459,8 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
               icon: const Icon(Icons.restart_alt_rounded, size: 16),
               label: Text(
                 diag.isRunningInFlatpak
-                    ? 'Generar comando de reinicio para anfitrión'
-                    : 'Reiniciar lector y servicio fprintd',
+                    ? l10n.maintUsbFlatpakBtn
+                    : l10n.maintUsbResetBtn,
               ),
             ),
           ],
@@ -443,7 +469,7 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
     );
   }
 
-  Widget _buildStatusFeedback(BuildContext context) {
+  Widget _buildStatusFeedback(BuildContext context, AppLocalizations l10n) {
     final accent = _statusIsError ? AppColors.error(context) : AppColors.primary(context);
 
     return Container(
@@ -486,7 +512,7 @@ class _MaintenanceDialogState extends State<MaintenanceDialog> {
               child: TextButton.icon(
                 onPressed: () => _copyToClipboard(_manualCommand!),
                 icon: const Icon(Icons.copy_rounded, size: 15),
-                label: const Text('Copiar comando'),
+                label: Text(l10n.copyCommandBtn),
               ),
             ),
           ],

@@ -78,6 +78,13 @@
   },
   {
     "type": "archive",
+    "url": "https://pub.dev/api/archives/intl-0.20.3.tar.gz",
+    "sha256": "1ca20c894b1717686a2319b8548763d812bc0aabdac580420a44c5178c57a867",
+    "dest": ".pub-cache/hosted/pub.dev/intl-0.20.3",
+    "strip-components": 0
+  },
+  {
+    "type": "archive",
     "url": "https://pub.dev/api/archives/leak_tracker-11.0.2.tar.gz",
     "sha256": "33e2e26bdd85a0112ec15400c8cbffea70d0f9c3407491f672a2fad47915e2de",
     "dest": ".pub-cache/hosted/pub.dev/leak_tracker-11.0.2",

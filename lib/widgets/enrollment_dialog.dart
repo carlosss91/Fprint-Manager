@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/l10n_ext.dart';
 import '../models/fprint_device_info.dart';
 import '../models/fingerprint_item.dart';
 import '../services/fprint_service.dart';
@@ -53,10 +55,17 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
         break;
       }
     }
+  }
 
-    _statusMessage = widget.device.scanType == ScanType.swipe
-        ? 'Desliza tu dedo suavemente sobre el sensor para comenzar.'
-        : 'Coloca tu dedo firmemente sobre el sensor para comenzar.';
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isEnrolling && _statusMessage.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
+      _statusMessage = widget.device.scanType == ScanType.swipe
+          ? l10n.enrollSwipeStart
+          : l10n.enrollPressStart;
+    }
   }
 
   @override
@@ -68,6 +77,7 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
   }
 
   Future<void> _startEnrollment() async {
+    final l10n = AppLocalizations.of(context)!;
     await _subscription?.cancel();
     await _session?.cancel();
 
@@ -78,7 +88,7 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
       _isRetry = false;
       _fingerPresent = false;
       _errorMessage = null;
-      _statusMessage = 'Preparando el sensor ${widget.device.name}...';
+      _statusMessage = l10n.enrollPreparing(widget.device.name);
     });
 
     try {
@@ -124,8 +134,9 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
         },
         onError: (Object err) {
           if (!mounted) return;
+          final l10n = AppLocalizations.of(context)!;
           setState(() {
-            _errorMessage = 'Error durante el registro: $err';
+            _errorMessage = l10n.enrollErrorPrefix('$err');
           });
         },
       );
@@ -156,6 +167,7 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final progress = _totalStages > 0
         ? (_currentStage / _totalStages).clamp(0.0, 1.0)
@@ -184,12 +196,12 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
               children: [
                 Text(
                   _isEnrolling
-                      ? 'Registrando: ${FingerprintItem.getFriendlyName(_selectedFinger)}'
-                      : 'Registrar nueva huella',
+                      ? l10n.enrollTitleActive(l10n.fingerDisplayName(_selectedFinger))
+                      : l10n.enrollTitleIdle,
                   style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  '${widget.device.name} • ${widget.device.scanType.displayLabel}',
+                  '${widget.device.name} • ${l10n.scanTypeLabel(widget.device.scanType)}',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -207,44 +219,48 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
         child: AnimatedSwitcher(
           duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 260),
           child: !_isEnrolling
-              ? _buildSelectionForm(context, alreadyEnrolled)
-              : _buildLiveEnrollmentProgress(context, progress, reduceMotion),
+              ? _buildSelectionForm(context, l10n, alreadyEnrolled)
+              : _buildLiveEnrollmentProgress(context, l10n, progress, reduceMotion),
         ),
       ),
       actions: [
         TextButton(
           onPressed: _cancelEnrollment,
-          child: Text(_isCompleted ? 'Cerrar' : 'Cancelar'),
+          child: Text(_isCompleted ? l10n.closeBtn : l10n.cancelBtn),
         ),
         if (!_isEnrolling)
           FilledButton.icon(
             onPressed: _startEnrollment,
             icon: const Icon(Icons.play_arrow_rounded, size: 18),
-            label: Text(alreadyEnrolled ? 'Sobrescribir huella' : 'Iniciar registro'),
+            label: Text(alreadyEnrolled ? l10n.enrollOverwriteBtn : l10n.enrollStartBtn),
           )
         else if (_errorMessage != null && !_isCompleted)
           FilledButton.icon(
             onPressed: _startEnrollment,
             icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Reintentar'),
+            label: Text(l10n.retryBtn),
           ),
       ],
     );
   }
 
-  Widget _buildSelectionForm(BuildContext context, bool alreadyEnrolled) {
+  Widget _buildSelectionForm(
+    BuildContext context,
+    AppLocalizations l10n,
+    bool alreadyEnrolled,
+  ) {
     final scanInstruction = widget.device.scanType == ScanType.swipe
-        ? 'Tu lector es de deslizamiento: requerirá $_totalStages pasadas suaves sobre el sensor.'
-        : 'Tu lector es táctil: requerirá apoyar y levantar el dedo $_totalStages veces hasta completar el círculo al 100%.';
+        ? l10n.enrollSwipeHint(_totalStages)
+        : l10n.enrollPressHint(_totalStages);
 
     return Column(
       key: const ValueKey('selection_form'),
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Selecciona el dedo que deseas registrar:',
-          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+        Text(
+          l10n.enrollSelectFinger,
+          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
@@ -254,13 +270,13 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
-          items: kFprintdFingers.entries.map((entry) {
-            final isAlready = widget.enrolledFingers.contains(entry.key);
+          items: kFprintdFingers.keys.map((fingerCode) {
+            final isAlready = widget.enrolledFingers.contains(fingerCode);
             return DropdownMenuItem(
-              value: entry.key,
+              value: fingerCode,
               child: Row(
                 children: [
-                  Text(entry.value),
+                  Text(l10n.fingerDisplayName(fingerCode)),
                   if (isAlready) ...[
                     const SizedBox(width: 8),
                     Container(
@@ -270,7 +286,7 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        'Ya inscrita',
+                        l10n.enrollAlreadyBadge,
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w600,
@@ -292,7 +308,7 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
         if (alreadyEnrolled) ...[
           const SizedBox(height: 10),
           Text(
-            'Nota: Este dedo ya tiene una huella guardada; al registrarlo nuevamente se reemplazará en fprintd.',
+            l10n.enrollAlreadyNote,
             style: TextStyle(
               fontSize: 12,
               color: AppColors.warning(context),
@@ -330,6 +346,7 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
 
   Widget _buildLiveEnrollmentProgress(
     BuildContext context,
+    AppLocalizations l10n,
     double targetProgress,
     bool reduceMotion,
   ) {
@@ -367,8 +384,8 @@ class _EnrollmentDialogState extends State<EnrollmentDialog> {
               ),
               child: Text(
                 _isCompleted
-                    ? '¡Registro completado • 100%!'
-                    : 'Etapa $_currentStage de $_totalStages • $percentage%',
+                    ? l10n.enrollCompletedBadge
+                    : l10n.enrollStageBadge(_currentStage, _totalStages, percentage),
                 style: AppTheme.tabularFiguresStyle.copyWith(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
